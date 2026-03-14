@@ -30,8 +30,9 @@ public class autoFarPark extends LinearOpMode {
     public String alliance = "RED";
     // this will hold the trajectoryAction we select based on alliance color
     public Action trajectoryActionChosen;
+    public DcMotor intake;
 
-    public class Intake {
+    /* public class Intake {
         private DcMotor intake;
 
         public Intake(HardwareMap hardwareMap) {
@@ -71,7 +72,7 @@ public class autoFarPark extends LinearOpMode {
             return new IntakeStop();
         }
     }
-
+    */
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -85,7 +86,8 @@ public class autoFarPark extends LinearOpMode {
         // instantiate drive class (MecanumDrive) at a particular pose.
         Pose2d initialPose = new Pose2d(0, 0, Math.toRadians(0));
         MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
-        Intake intake = new Intake(hardwareMap);
+        //Intake intake = new Intake(hardwareMap);
+        intake = hardwareMap.get(DcMotor.class, "intake");
 
         // we build our trajectories during initialization to avoid wasting time during auto
         // tab one is for red
@@ -111,12 +113,15 @@ public class autoFarPark extends LinearOpMode {
         }
 
         // this is where we actually run the trajectoryAction
-        Actions.runBlocking(
+        /*Actions.runBlocking(
                 new SequentialAction(
                         intake.intakeIn(),
                         trajectoryActionChosen,
                         intake.intakeStop()
                 )
-        );
+        );*/
+        intake.setPower(1);
+        Actions.runBlocking(trajectoryActionChosen);
+        intake.setPower(0);
     }
 }
