@@ -530,7 +530,18 @@ public class BallBotMainDrive extends LinearOpMode {
                                     "input_x,input_y,input_turn," +
                                     "trans_x,trans_y,rotation_cmd," +
                                     "lf,rf,lb,rb,total_power," +
+                                    "applied_lf,applied_rf,applied_lb,applied_rb," +
+                                    "drive_field_mode,drive_dpad_active,drive_dt," +
                                     "pose_x,pose_y,pose_h," +
+
+                                    "sh_mode,sh_targetRPM,sh_currentRPM,sh_errorRPM,sh_volt,sh_pose,sh_spinupTime," +
+
+                                    "turret_mode,turret_power,turret_pose,turret_id,turret_pipeline," +
+
+                                    "lift_pose,lift_volt,lift_err,lift_mode,lift_up,lift_down," +
+
+                                    "shoot_state," +
+
                                     "spx_mode,spx_currentAngle,spx_targetAngle,spx_error,spx_appliedPower," +
                                     "silo1,silo2,silo3," +
                                     "btn_a,btn_x,btn_g1_rt,btn_g1_lt,btn_g1_rb,btn_g2_y," +
@@ -562,8 +573,16 @@ public class BallBotMainDrive extends LinearOpMode {
             spin.sampleSensorsNow();
             spin.update();             // 2️⃣ process logic
             Spindexer.TelemetryPacket spina = spin.getTelemetry(); // 3️⃣ snapshot
-            //telemetry getter
+            //drive telemetry getter
             DriveClass.DriveTelemetry d = drive.getDriveTelemetry();
+            double appliedLF = d.appliedLF;
+            double appliedRF = d.appliedRF;
+            double appliedLB = d.appliedLB;
+            double appliedRB = d.appliedRB;
+
+            boolean driveFieldMode = d.fieldOrientedEnabled;
+            boolean driveDpadActive = d.dpadActive;
+            double driveDt = d.dt;
             // --- Update spindexer & autoShoot ---
             hood.update();
             Hood.TelemetryPacket H = hood.getTelemetry();
@@ -711,6 +730,17 @@ public class BallBotMainDrive extends LinearOpMode {
                 double now = runtime.seconds();
 
                 Spindexer.TelemetryPacket spx = spin.getTelemetry();
+                shooter.updateTelemetry();
+                ShooterClass.ShooterTelemetry s = shooter.getTelemetry();
+
+                String turretPose = String.valueOf(turret.getPose());
+                String shPose = String.valueOf(s.pose);
+
+                int turretPipeline = turret.limelight.getStatus().getPipelineIndex();
+                int turretId = turret.getID();
+                double turretPower = turret.turretPower;
+
+                String shootState = autoShoot.getStateName();
 
                 double totalPower =
                         Math.abs(d.lf) + Math.abs(d.rf) +
@@ -735,7 +765,7 @@ public class BallBotMainDrive extends LinearOpMode {
                 if (!Double.isNaN(globalAvg3)) csvAvg3 = globalAvg3;
                 if (!Double.isNaN(globalOverall)) csvOverall = globalOverall;
 
-                csvTargetSilo = autoShoot.getLastTargetSiloIndex();
+                csvTargetSilo = (autoShoot.getLastTargetSiloIndex()) + 1;
                 csvTargetAngle = autoShoot.getLastTargetAngleDeg();
                 csvMoveToSiloSec = autoShoot.getLastMoveToSiloSec();
                 csvSpinWaitSec = autoShoot.getLastSpinWaitSec();
@@ -757,7 +787,18 @@ public class BallBotMainDrive extends LinearOpMode {
                                 "%.4f,%.4f,%.4f," +
                                 "%.4f,%.4f,%.4f," +
                                 "%.4f,%.4f,%.4f,%.4f,%.4f," +
+                                "%.4f,%.4f,%.4f,%.4f," +       // applied_lf,applied_rf,applied_lb,applied_rb
+                                "%b,%b,%.4f," +                // drive_field_mode, drive_dpad_active, drive_dt
                                 "%.4f,%.4f,%.4f," +
+
+                                "%s,%.2f,%.1f,%.1f,%.3f,%s,%.3f," +
+
+                                "%s,%.3f,%s,%d,%d," +
+
+                                "%.3f,%.3f,%.3f,%s,%b,%b," +
+
+                                "%s," +
+
                                 "%s,%.2f,%.2f,%.2f,%.3f," +
                                 "%s,%s,%s," +
                                 "%b,%b,%b,%b,%b,%b," +
@@ -768,7 +809,38 @@ public class BallBotMainDrive extends LinearOpMode {
                         d.rawX, d.rawY, d.rawTurn,
                         d.tx_field, d.ty_field, d.rotationCmd,
                         d.lf, d.rf, d.lb, d.rb, totalPower,
+                        d.appliedLF,
+                        d.appliedRF,
+                        d.appliedLB,
+                        d.appliedRB,
+                        driveFieldMode,
+                        driveDpadActive,
+                        driveDt,
                         d.pose.x, d.pose.y, d.pose.h,
+
+                        s.mode,
+                        s.targetRPM,
+                        s.currentRPM,
+                        s.errorRPM,
+                        s.motorPower,
+                        shPose,
+                        s.spinupTimeSec,
+
+                        turret.mode,
+                        turretPower,
+                        turretPose,
+                        turretId,
+                        turretPipeline,
+
+                        l.position,
+                        l.voltage,
+                        l.error,
+                        l.mode,
+                        lifter.isUp(),
+                        lifter.isDown(),
+
+                        shootState,
+
                         spx.mode,
                         spx.currentAngle,
                         spx.targetAngle,

@@ -553,6 +553,10 @@ public class ShooterExecutionClass {
 
     // ---------------- GETTERS for logging (thread-safe copies) ----------------
 
+    public synchronized String getStateName() {
+        return state.name();
+    }
+
     // Last completed press shot times (may be NaN for missing shots)
     public synchronized double[] getLastCompletedPressShotTimes() {
         return Arrays.copyOf(lastCompletedPressShotTimes, 3);

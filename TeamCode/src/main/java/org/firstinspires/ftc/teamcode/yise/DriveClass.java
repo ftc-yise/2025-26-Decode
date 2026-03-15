@@ -12,6 +12,11 @@ public class DriveClass {
     private double t_robotX, t_robotY;
     private double t_lf, t_rf, t_lb, t_rb;
     private double t_headingDeg;
+
+    private double t_appliedLF, t_appliedRF, t_appliedLB, t_appliedRB;
+    private boolean t_fieldOrientedEnabled;
+    private boolean t_dpadActive;
+    private double t_dt;
     private SparkFunOTOS.Pose2D t_pose;
 
 
@@ -108,8 +113,15 @@ public class DriveClass {
         rightBackDrive.setZeroPowerBehavior(mode);
     }
 
+    private long lastLoopTime = System.nanoTime();
+
+
     public void updateMotors(Gamepad gamepad, boolean reverse) {
         double directional = 1;
+
+        long now = System.nanoTime();
+        t_dt = (now - lastLoopTime) / 1e9;
+        lastLoopTime = now;
 
         if (reverse == true){
             directional = -1;
@@ -205,23 +217,6 @@ public class DriveClass {
             xPreviouslyPressed = false;
         }
 
-        if (runmodeFieldorientation) {
-            leftFrontDrive.setPower(lf);
-            rightFrontDrive.setPower(rf);
-            leftBackDrive.setPower(lb);
-            rightBackDrive.setPower(rb);
-        } else {
-            double leftFrontPower  = rawY + rawX - rawTurn;
-            double rightFrontPower = rawY - rawX + rawTurn;
-            double leftBackPower   = rawY - rawX - rawTurn;
-            double rightBackPower  = rawY + rawX + rawTurn;
-
-            // Send calculated power to wheels
-            leftFrontDrive.setPower(leftFrontPower * currentSpeed);
-            rightFrontDrive.setPower(rightFrontPower * currentSpeed);
-            leftBackDrive.setPower(leftBackPower * currentSpeed);
-            rightBackDrive.setPower(rightBackPower * currentSpeed);
-        }
         // update last applied powers
         lastLF = lf; lastRF = rf; lastLB = lb; lastRB = rb;
 
@@ -249,6 +244,40 @@ public class DriveClass {
         t_headingDeg = headingDeg;
         t_pose = pose;
 
+        double appliedLF, appliedRF, appliedLB, appliedRB;
+
+        if (runmodeFieldorientation) {
+            appliedLF = lf;
+            appliedRF = rf;
+            appliedLB = lb;
+            appliedRB = rb;
+
+            leftFrontDrive.setPower(appliedLF);
+            rightFrontDrive.setPower(appliedRF);
+            leftBackDrive.setPower(appliedLB);
+            rightBackDrive.setPower(appliedRB);
+        } else {
+            double leftFrontPower  = rawY + rawX - rawTurn;
+            double rightFrontPower = rawY - rawX + rawTurn;
+            double leftBackPower   = rawY - rawX - rawTurn;
+            double rightBackPower  = rawY + rawX + rawTurn;
+
+            appliedLF = leftFrontPower * currentSpeed;
+            appliedRF = rightFrontPower * currentSpeed;
+            appliedLB = leftBackPower * currentSpeed;
+            appliedRB = rightBackPower * currentSpeed;
+
+            leftFrontDrive.setPower(appliedLF);
+            rightFrontDrive.setPower(appliedRF);
+            leftBackDrive.setPower(appliedLB);
+            rightBackDrive.setPower(appliedRB);
+        }
+        t_lf = appliedLF;
+        t_rf = appliedRF;
+        t_lb = appliedLB;
+        t_rb = appliedRB;
+        t_fieldOrientedEnabled = runmodeFieldorientation;
+        t_dpadActive = dpadActive;
     }
 
     public void setAutoPower(double leftFrontPower, double rightFrontPower, double leftBackPower, double rightBackPower){
@@ -268,6 +297,12 @@ public class DriveClass {
         public SparkFunOTOS.Pose2D pose;
 
         public double currentSpeed;
+
+        public double appliedLF, appliedRF, appliedLB, appliedRB;
+        public boolean fieldOrientedEnabled;
+        public boolean dpadActive;
+        public double dt;
+
     }
 
     public DriveTelemetry getDriveTelemetry() {
@@ -292,6 +327,15 @@ public class DriveClass {
         d.pose = t_pose;
 
         d.currentSpeed = currentSpeed;
+
+        d.appliedLF = t_appliedLF;
+        d.appliedRF = t_appliedRF;
+        d.appliedLB = t_appliedLB;
+        d.appliedRB = t_appliedRB;
+
+        d.fieldOrientedEnabled = t_fieldOrientedEnabled;
+        d.dpadActive = t_dpadActive;
+        d.dt = t_dt;
 
         return d;
     }

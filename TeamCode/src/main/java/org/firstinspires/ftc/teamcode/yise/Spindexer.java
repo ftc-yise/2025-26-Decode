@@ -59,6 +59,10 @@ public class Spindexer {
     public static double silo2;
     public static double silo3;
 
+    private static final double SILO_1_TARGET_DEG = 64.5;
+    private static final double SILO_2_TARGET_DEG = 180.0;
+    private static final double SILO_3_TARGET_DEG = 294.0;
+
     // keep your existing angle-based silo definitions (not used for direct silo commands now,
     // but retained for backward compatibility / initSilos)
     public static double[] SILO_ANGLES = {
@@ -184,9 +188,23 @@ public class Spindexer {
     }
 
     // direct silo commands: set the fixed position and mode
-    public void goToSilo1() { targetPosition = SILO_POSITIONS[0]; mode = Mode.SILO_1; }
-    public void goToSilo2() { targetPosition = SILO_POSITIONS[1]; mode = Mode.SILO_2; }
-    public void goToSilo3() { targetPosition = SILO_POSITIONS[2]; mode = Mode.SILO_3; }
+    public void goToSilo1() {
+        targetPosition = SILO_POSITIONS[0];
+        targetAngleDeg = SILO_1_TARGET_DEG;
+        mode = Mode.SILO_1;
+    }
+
+    public void goToSilo2() {
+        targetPosition = SILO_POSITIONS[1];
+        targetAngleDeg = SILO_2_TARGET_DEG;
+        mode = Mode.SILO_2;
+    }
+
+    public void goToSilo3() {
+        targetPosition = SILO_POSITIONS[2];
+        targetAngleDeg = SILO_3_TARGET_DEG;
+        mode = Mode.SILO_3;
+    }
 
     /**
      * Start a non-blocking manual cycle through poses:
@@ -325,7 +343,7 @@ public class Spindexer {
         t.mode = mode;
         t.voltage = voltage;
         t.currentAngle = current;
-        t.targetAngle = targetPosition;
+        t.targetAngle = targetAngleDeg;
         t.angleError = smallestAngleError(targetAngleDeg, current);
         t.appliedPower = outputPosition; // repurposed as "position"
         t.manualPower = 0.0;
