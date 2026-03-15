@@ -7,7 +7,6 @@ import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.Pose2d;
-import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
 import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
@@ -15,7 +14,6 @@ import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.teamcode.yise.Parameters;
 
@@ -32,51 +30,9 @@ public class autoFarPark extends LinearOpMode {
     public Action trajectoryActionChosen;
     public DcMotor intake;
 
-    /* public class Intake {
-        private DcMotor intake;
-
-        public Intake(HardwareMap hardwareMap) {
-            intake = hardwareMap.get(DcMotor.class, "intake");
-        }
-
-        public class IntakeIn implements Action {
-            private boolean initialized = false;
-
-            @Override
-            public boolean run(@NonNull TelemetryPacket packet) {
-                if (!initialized) {
-                    intake.setPower(1);
-                    initialized = true;
-                }
-                return false;
-            }
-        }
-
-        public Action intakeIn() {
-            return new IntakeIn();
-        }
-        public class IntakeStop implements Action {
-            private boolean initialized = false;
-
-            @Override
-            public boolean run(@NonNull TelemetryPacket packet) {
-                if (!initialized) {
-                    intake.setPower(0);
-                    initialized = true;
-                }
-                return false;
-            }
-        }
-
-        public Action intakeStop() {
-            return new IntakeStop();
-        }
-    }
-    */
 
     @Override
     public void runOpMode() throws InterruptedException {
-
 
         // default alliance is red, only overwrite if blue was chosen in game values
         if (Parameters.allianceColor == Parameters.Color.BLUE) {
@@ -112,14 +68,6 @@ public class autoFarPark extends LinearOpMode {
             trajectoryActionChosen = tab2.build();
         }
 
-        // this is where we actually run the trajectoryAction
-        /*Actions.runBlocking(
-                new SequentialAction(
-                        intake.intakeIn(),
-                        trajectoryActionChosen,
-                        intake.intakeStop()
-                )
-        );*/
         intake.setPower(1);
         Actions.runBlocking(trajectoryActionChosen);
         intake.setPower(0);
