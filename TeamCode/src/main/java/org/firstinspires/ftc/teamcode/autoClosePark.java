@@ -21,9 +21,9 @@ import java.util.Objects;
 
 
 @Config
-@Autonomous(name = "autoFarPark", group = "Linear Opmode")
+@Autonomous(name = "autoClosePark", group = "Linear Opmode")
 
-public class autoFarPark extends LinearOpMode {
+public class autoClosePark extends LinearOpMode {
     // default alliance is red
     public String alliance = "RED";
     // this will hold the trajectoryAction we select based on alliance color
@@ -42,9 +42,9 @@ public class autoFarPark extends LinearOpMode {
         // instantiate drive class (MecanumDrive) at a particular pose.
         Pose2d initialPose = null;
         if (Objects.equals(alliance, "RED")) {
-            initialPose = new Pose2d(-63, -12, Math.toRadians(0));
+            initialPose = new Pose2d(53, -50, Math.toRadians(0));
         }else if (Objects.equals(alliance, "BLUE")) {
-            initialPose = new Pose2d(-63, 12, Math.toRadians(0));
+            initialPose = new Pose2d(-53, 50, Math.toRadians(0));
         }
         MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
         //Intake intake = new Intake(hardwareMap);
@@ -53,11 +53,11 @@ public class autoFarPark extends LinearOpMode {
         // we build our trajectories during initialization to avoid wasting time during auto
         // tab one is for red
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
-                .strafeTo(new Vector2d(-63, 14))
+                .strafeTo(new Vector2d(53, -40))
                 .waitSeconds(3);
         // tab two is for blue
         TrajectoryActionBuilder tab2 = drive.actionBuilder(initialPose)
-                .strafeTo(new Vector2d(-63, -14))
+                .strafeTo(new Vector2d(-53, 40))
                 .waitSeconds(3);
 
         waitForStart();
