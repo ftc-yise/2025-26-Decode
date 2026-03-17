@@ -385,6 +385,7 @@ public class DriveClass {
         return deg;
     }
 
+
     private double clamp(double v, double min, double max) {
         return Math.max(min, Math.min(max, v));
     }
