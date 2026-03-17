@@ -91,7 +91,7 @@ public class ShooterExecutionClass {
         spin.initSilos();
         // keep previous default init (optional)
         lifter.setPresetPositions(0.0, 1.0);
-        lifter.setCalibration(0.488, 0, 1.5, 1);
+        lifter.setCalibration(0.457, 0, 1.42, 1);
 
         // init plan to -1
         for (int i = 0; i < firingPlan.length; i++) firingPlan[i] = -1;
@@ -220,10 +220,10 @@ public class ShooterExecutionClass {
                 // If forced, accept looser tolerance and keep moving between silos
                 double angleErr = Math.abs(spindexer.getTelemetry().angleError);
                 if (timer.seconds() > 1.25) {
-                    if (angleErr < 1.8) {
+                    if (angleErr < 1.5) {
                         lastMoveToSiloSec = timer.seconds();
                         spindexer.sampleSensorsNow();
-                        spindexer.setNeutral();
+                        //spindexer.setNeutral();
                         state = State.SPIN_WAIT;
                         timer.reset();
                     } else if (timer.seconds() > 5) { // watchdog
@@ -236,7 +236,7 @@ public class ShooterExecutionClass {
                 break;
 
             case SPIN_WAIT:
-                if (timer.seconds() > .05) {
+                if (timer.seconds() > .1) {
                     lastSpinWaitSec = timer.seconds();
                     state = State.SPIN_UP_SHOOTER;
                     timer.reset();
@@ -254,7 +254,7 @@ public class ShooterExecutionClass {
 
             case FIRE_LIFT_UP:
                 if (lifter.isUp() || timer.seconds() > LIFTER_MOVE_TIMEOUT) {
-                    if (timer.seconds() > .18) {
+                    if (timer.seconds() > .25) {
                         lastFireLiftUpSec = timer.seconds();
                         lifter.setDown();
                         timer.reset();

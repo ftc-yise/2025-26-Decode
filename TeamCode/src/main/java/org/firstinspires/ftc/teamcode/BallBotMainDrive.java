@@ -10,6 +10,7 @@ import org.firstinspires.ftc.teamcode.yise.Parameters;
 import org.firstinspires.ftc.teamcode.yise.lifter;
 import org.firstinspires.ftc.teamcode.yise.Ledclass;
 import org.firstinspires.ftc.teamcode.yise.ShotPatternManager;
+import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -35,7 +36,6 @@ public class BallBotMainDrive extends LinearOpMode {
     private ElapsedTime homingTimer = new ElapsedTime();
     private ElapsedTime snapTimer = new ElapsedTime();
     private boolean modeTogglePressed = false;
-
     private static final int LEFT_LIMIT = -1370;
     public boolean once = true;
     private static final int CENTER_TARGET = -685;
@@ -531,7 +531,7 @@ public class BallBotMainDrive extends LinearOpMode {
                                     "trans_x,trans_y,rotation_cmd," +
                                     "lf,rf,lb,rb,total_power," +
                                     "applied_lf,applied_rf,applied_lb,applied_rb," +
-                                    "drive_field_mode,drive_dpad_active,drive_dt," +
+                                    "drive_field_mode,drive_dpad_active,drive_dt,battery_volt," +
                                     "pose_x,pose_y,pose_h," +
 
                                     "sh_mode,sh_targetRPM,sh_currentRPM,sh_errorRPM,sh_volt,sh_pose,sh_spinupTime," +
@@ -782,13 +782,15 @@ public class BallBotMainDrive extends LinearOpMode {
                 boolean g1Rb = gamepad1.right_bumper;
                 boolean g2Y  = gamepad2.y;
 
+                double batteryVolt = getBatteryVoltage();
                 logWriter.printf(
                         "%.3f," +
                                 "%.4f,%.4f,%.4f," +
                                 "%.4f,%.4f,%.4f," +
                                 "%.4f,%.4f,%.4f,%.4f,%.4f," +
                                 "%.4f,%.4f,%.4f,%.4f," +       // applied_lf,applied_rf,applied_lb,applied_rb
-                                "%b,%b,%.4f," +                // drive_field_mode, drive_dpad_active, drive_dt
+                                "%b,%b,%.4f," +// drive_field_mode, drive_dpad_active, drive_dt
+                                "%.3f," +
                                 "%.4f,%.4f,%.4f," +
 
                                 "%s,%.2f,%.1f,%.1f,%.3f,%s,%.3f," +
@@ -815,7 +817,11 @@ public class BallBotMainDrive extends LinearOpMode {
                         d.appliedRB,
                         driveFieldMode,
                         driveDpadActive,
+
                         driveDt,
+
+                        batteryVolt,
+
                         d.pose.x, d.pose.y, d.pose.h,
 
                         s.mode,
@@ -929,5 +935,12 @@ public class BallBotMainDrive extends LinearOpMode {
         return true;
     }
 
-
+    private double getBatteryVoltage() {
+        double best = 0.0;
+        for (VoltageSensor vs : hardwareMap.voltageSensor) {
+            double v = vs.getVoltage();
+            if (v > best) best = v;
+        }
+        return best;
+    }
 }
