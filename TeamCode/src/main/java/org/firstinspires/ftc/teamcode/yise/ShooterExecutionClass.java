@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class ShooterExecutionClass {
 
@@ -28,6 +29,8 @@ public class ShooterExecutionClass {
     private final double LIFTER_MOVE_TIMEOUT = 1.2; // seconds
     public int shots = 0;
 
+    public boolean dpad = false;
+
     public int shotsFired = 0;
     private int totalShots = 0;        // dynamically computed at cycle start
     public int currentSiloIndex = -1; // currently active silo
@@ -47,6 +50,40 @@ public class ShooterExecutionClass {
     private int firingCount = 0;                    // how many entries in firingPlan
     private int firingIndex = 0;                    // next index to run
 
+    // ------------------ TIMING & AVERAGES (NEW) ------------------
+    // Time tracking for a single button-press cycle
+    private long pressStartTimeMs = 0L;
+    private final double[] currentPressShotTimes = new double[] { Double.NaN, Double.NaN, Double.NaN };
+    private int currentPressShotCount = 0;
+    private boolean pressActive = false;
+
+    // Last completed press (sticky values; start at 0.0)
+    private final double[] lastCompletedPressShotTimes = new double[] { 0.0, 0.0, 0.0 };
+    private double lastCompletedPressAverage = 0.0;
+
+
+    // Global accumulators for averages (only count presses/shots that actually occurred)
+    private long totalPresses = 0L;
+    private double sumShot1 = 0.0;
+    private long countShot1 = 0L;
+    private double sumShot2 = 0.0;
+    private long countShot2 = 0L;
+    private double sumShot3 = 0.0;
+    private long countShot3 = 0L;
+    private double sumAllShotTimes = 0.0;
+    private long countAllShots = 0L;
+    private double lastMoveToSiloSec = 0.0;
+    private double lastSpinWaitSec = 0.0;
+    private double lastSpinUpSec = 0.0;
+    private double lastFireLiftUpSec = 0.0;
+    private double lastFireLiftDownSec = 0.0;
+
+    private int lastTargetSiloIndex = -1;
+    private double lastTargetAngleDeg = 0.0;
+
+
+    // -----------------------------------------------------------
+
     public ShooterExecutionClass(Spindexer spin, ShooterClass shooter, HardwareMap hardwareMap, lifter lift) {
         this.spindexer = spin;
         this.shooter = shooter;
@@ -54,7 +91,7 @@ public class ShooterExecutionClass {
         spin.initSilos();
         // keep previous default init (optional)
         lifter.setPresetPositions(0.0, 1.0);
-        lifter.setCalibration(1.41, 0, 2.5, 1);
+        lifter.setCalibration(0.457, 0, 1.42, 1);
 
         // init plan to -1
         for (int i = 0; i < firingPlan.length; i++) firingPlan[i] = -1;
@@ -68,6 +105,9 @@ public class ShooterExecutionClass {
     // ---------------- START CYCLE ----------------
     public void startCycle() {
         if (state != State.IDLE) return;
+
+        // mark press start for timing
+        beginPressTiming();
 
         // Read sensors now and prevent updates while we compute plan
         spindexer.sampleSensorsNow();
@@ -131,6 +171,10 @@ public class ShooterExecutionClass {
             return;
         }
         forceShooting = true;
+
+        // mark press start for timing (forced mode triggered by button hold)
+        beginPressTiming();
+
         spindexer.disableSensorUpdates(); // avoid conflicting sensor updates
         shotsFired = 0;
         totalShots = Integer.MAX_VALUE; // effectively "until stopped"
@@ -144,6 +188,9 @@ public class ShooterExecutionClass {
 
     // Stop forced-fire and re-enable normal behavior
     public void stopForcedCycle() {
+        // finalize any press in progress (e.g., user released while mid-shots)
+        finalizePressIfActive();
+
         forceShooting = false;
         spindexer.enableSensorUpdates();
         // gracefully finish this cycle (let update() put us back to IDLE)
@@ -156,28 +203,16 @@ public class ShooterExecutionClass {
 
         switch (state) {
             case JITTER: {
-                double t = timer.seconds();
-                if (t < 0.22) {
-                    spindexer.setManual(0.3);
-                } else if (t < 0.44) {
-                    spindexer.setManual(-0.2);
-                } else {
-                    spindexer.setManual(0.0);
-                    spindexer.enableSensorUpdates();
-                    spindexer.goToSilo1();
-                    if (t > 1.5 && lifter.isDown()) {
-                        timer.reset();
-                        state = State.COMPLETE;
-                    }
-                }
                 return;
             }
 
             case IDLE:
-                if (Parameters.autonomous == Parameters.AUTONOMOUS.YES) {
-                    shooter.update(false, false, true);
-                } else {
-                    shooter.update(false, false, false);
+                if (!dpad) {
+                    if (org.firstinspires.ftc.teamcode.yise.Parameters.autonomous == org.firstinspires.ftc.teamcode.yise.Parameters.AUTONOMOUS.YES) {
+                        shooter.update(false, false, true);
+                    } else {
+                        shooter.update(false, false, false);
+                    }
                 }
                 return;
 
@@ -185,21 +220,24 @@ public class ShooterExecutionClass {
                 // If forced, accept looser tolerance and keep moving between silos
                 double angleErr = Math.abs(spindexer.getTelemetry().angleError);
                 if (timer.seconds() > 1.25) {
-                    if (angleErr < 1.8) {
+                    if (angleErr < 1.5) {
+                        lastMoveToSiloSec = timer.seconds();
                         spindexer.sampleSensorsNow();
-                        spindexer.setNeutral();
+                        //spindexer.setNeutral();
                         state = State.SPIN_WAIT;
                         timer.reset();
                     } else if (timer.seconds() > 5) { // watchdog
                         spindexer.sampleSensorsNow();
                         state = State.SPIN_WAIT;
+                        lastMoveToSiloSec = timer.seconds();
                         timer.reset();
                     }
                 }
                 break;
 
             case SPIN_WAIT:
-                if (timer.seconds() > .15) {
+                if (timer.seconds() > .1) {
+                    lastSpinWaitSec = timer.seconds();
                     state = State.SPIN_UP_SHOOTER;
                     timer.reset();
                 }
@@ -207,15 +245,17 @@ public class ShooterExecutionClass {
 
             case SPIN_UP_SHOOTER:
                 if (shooter.getTelemetry().errorRPM < 0) {
+                    lastSpinUpSec = timer.seconds();
                     lifter.setUp();
-                        timer.reset();
-                        state = State.FIRE_LIFT_UP;
+                    timer.reset();
+                    state = State.FIRE_LIFT_UP;
                 }
                 break;
 
             case FIRE_LIFT_UP:
                 if (lifter.isUp() || timer.seconds() > LIFTER_MOVE_TIMEOUT) {
-                    if (timer.seconds() > .18) {
+                    if (timer.seconds() > .25) {
+                        lastFireLiftUpSec = timer.seconds();
                         lifter.setDown();
                         timer.reset();
                         state = State.FIRE_LIFT_DOWN;
@@ -228,6 +268,9 @@ public class ShooterExecutionClass {
                 if (lifter.isDown() || timer.seconds() > (LIFTER_MOVE_TIMEOUT + 0.3)) {
                     shotsFired++;
                     shots++;
+
+                    // record shot timing relative to press start (if a press is active)
+                    recordShotTimingForCurrentPress();
 
                     // SAFETY: read current color at that silo BEFORE we possibly clear it.
                     Spindexer.BallColor firedColor = Spindexer.BallColor.NONE;
@@ -260,11 +303,19 @@ public class ShooterExecutionClass {
 
                     if (!forceShooting) {
                         if (shotsFired >= totalShots && lifter.isDown()) {
+                            // finalize press if it hasn't been finalized yet
+                            finalizePressIfActive();
+                            lastFireLiftDownSec = timer.seconds();
+
                             state = State.COMPLETE;
                         } else {
+                            lastFireLiftDownSec = timer.seconds();
+
                             state = State.NEXT_SILO;
                         }
                     } else {
+                        lastFireLiftDownSec = timer.seconds();
+
                         // forced -> continue cycling
                         state = State.NEXT_SILO;
                     }
@@ -284,6 +335,9 @@ public class ShooterExecutionClass {
                 // clear pattern mode when done
                 patternMode = false;
                 state = State.IDLE;
+
+                // finalize press in case we reached COMPLETE without 3 shots (safety)
+                finalizePressIfActive();
                 break;
         }
     }
@@ -332,13 +386,18 @@ public class ShooterExecutionClass {
 
     // Small helper: call the correct go-to function for an index
     private void goToSiloIndex(int idx) {
+        lastTargetSiloIndex = idx;
         switch (idx) {
             case 0: spindexer.goToSilo1(); break;
             case 1: spindexer.goToSilo2(); break;
             case 2: spindexer.goToSilo3(); break;
             default: break;
         }
+
+        // capture whatever target the spindexer currently reports
+        lastTargetAngleDeg = spindexer.getTelemetry().targetAngle;
     }
+
 
     // Build firing plan from the queued pattern (non-destructive)
     // Returns true if a valid plan (>=1 entries) was built, false otherwise.
@@ -406,5 +465,136 @@ public class ShooterExecutionClass {
     public boolean isBusy() {
         return state != State.IDLE;
     }
+
+    // ---------------- TIMING UTILITIES (NEW) ----------------
+
+    // called at the start of a button-press triggered cycle or forced-cycle start
+    private void beginPressTiming() {
+        pressStartTimeMs = System.currentTimeMillis();
+        Arrays.fill(currentPressShotTimes, Double.NaN);
+        currentPressShotCount = 0;
+        pressActive = true;
+    }
+
+    // called when a shot completes to capture time relative to press
+    private synchronized void recordShotTimingForCurrentPress() {
+        if (!pressActive) return;
+
+        long now = System.currentTimeMillis();
+        int shotIndex = shotsFired - 1; // shotsFired was incremented already
+        double elapsedSec = (now - pressStartTimeMs) / 1000.0;
+
+        // only record up to the first three shots (indices 0..2)
+        if (shotIndex >= 0 && shotIndex < 3) {
+            currentPressShotTimes[shotIndex] = elapsedSec;
+            currentPressShotCount = Math.max(currentPressShotCount, shotIndex + 1);
+        }
+
+        // If we've recorded three shots, finalize the press
+        if (currentPressShotCount >= 3) {
+            finalizePress();
+        }
+    }
+
+    // finalize press when either 3 shots fired OR press ended (release) OR cycle complete
+    private synchronized void finalizePress() {
+        if (!pressActive) return;
+
+        // compute press average across whatever shots we recorded this press
+        int n = currentPressShotCount;
+        if (n == 0) {
+            pressActive = false;
+            return;
+        }
+
+        double pressSum = 0.0;
+        for (int i = 0; i < n; i++) {
+            double t = currentPressShotTimes[i];
+            if (!Double.isNaN(t)) pressSum += t;
+        }
+        double pressAvg = pressSum / (double) n;
+
+        // update last completed press (for opmode reading / logging)
+        for (int i = 0; i < 3; i++) {
+            lastCompletedPressShotTimes[i] = Double.isNaN(currentPressShotTimes[i]) ? 0.0 : currentPressShotTimes[i];
+        }
+        lastCompletedPressAverage = pressAvg;
+
+
+        // update global accumulators
+        totalPresses++;
+        if (!Double.isNaN(currentPressShotTimes[0])) {
+            sumShot1 += currentPressShotTimes[0];
+            countShot1++;
+            sumAllShotTimes += currentPressShotTimes[0];
+            countAllShots++;
+        }
+        if (n >= 2 && !Double.isNaN(currentPressShotTimes[1])) {
+            sumShot2 += currentPressShotTimes[1];
+            countShot2++;
+            sumAllShotTimes += currentPressShotTimes[1];
+            countAllShots++;
+        }
+        if (n >= 3 && !Double.isNaN(currentPressShotTimes[2])) {
+            sumShot3 += currentPressShotTimes[2];
+            countShot3++;
+            sumAllShotTimes += currentPressShotTimes[2];
+            countAllShots++;
+        }
+
+        // deactivate press
+        pressActive = false;
+    }
+
+    // finalize press if active (used by stopForcedCycle() and COMPLETE)
+    private synchronized void finalizePressIfActive() {
+        if (pressActive) finalizePress();
+    }
+
+    // ---------------- GETTERS for logging (thread-safe copies) ----------------
+
+    public synchronized String getStateName() {
+        return state.name();
+    }
+
+    // Last completed press shot times (may be NaN for missing shots)
+    public synchronized double[] getLastCompletedPressShotTimes() {
+        return Arrays.copyOf(lastCompletedPressShotTimes, 3);
+    }
+
+    public synchronized double getLastCompletedPressAverage() {
+        return lastCompletedPressAverage;
+    }
+
+    // Global averages (returns NaN if no data)
+    public synchronized double getGlobalAverageShot1() {
+        return (countShot1 > 0) ? (sumShot1 / (double) countShot1) : 0.0;
+    }
+
+
+    public synchronized double getGlobalAverageShot2() {
+        return (countShot2 > 0) ? (sumShot2 / (double) countShot2) : 0.0;
+    }
+
+    public synchronized double getGlobalAverageShot3() {
+        return (countShot3 > 0) ? (sumShot3 / (double) countShot3) : 0.0;
+    }
+
+    public synchronized double getGlobalOverallAverage() {
+        return (countAllShots > 0) ? (sumAllShotTimes / (double) countAllShots) : 0.0;
+    }
+
+
+    public synchronized long getTotalPressesCounted() {
+        return totalPresses;
+    }
+    public synchronized double getLastMoveToSiloSec() { return lastMoveToSiloSec; }
+    public synchronized double getLastSpinWaitSec() { return lastSpinWaitSec; }
+    public synchronized double getLastSpinUpSec() { return lastSpinUpSec; }
+    public synchronized double getLastFireLiftUpSec() { return lastFireLiftUpSec; }
+    public synchronized double getLastFireLiftDownSec() { return lastFireLiftDownSec; }
+
+    public synchronized int getLastTargetSiloIndex() { return lastTargetSiloIndex; }
+    public synchronized double getLastTargetAngleDeg() { return lastTargetAngleDeg; }
 
 }

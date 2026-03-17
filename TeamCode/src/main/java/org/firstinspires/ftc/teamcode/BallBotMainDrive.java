@@ -1,5 +1,17 @@
 package org.firstinspires.ftc.teamcode;
 
+import org.firstinspires.ftc.teamcode.yise.DriveClass;
+import org.firstinspires.ftc.teamcode.yise.Hood;
+import org.firstinspires.ftc.teamcode.yise.ShooterClass;
+import org.firstinspires.ftc.teamcode.yise.ShooterExecutionClass;
+import org.firstinspires.ftc.teamcode.yise.Spindexer;
+import org.firstinspires.ftc.teamcode.yise.Turret;
+import org.firstinspires.ftc.teamcode.yise.Parameters;
+import org.firstinspires.ftc.teamcode.yise.lifter;
+import org.firstinspires.ftc.teamcode.yise.Ledclass;
+import org.firstinspires.ftc.teamcode.yise.ShotPatternManager;
+import com.qualcomm.robotcore.hardware.VoltageSensor;
+
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
@@ -8,22 +20,13 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
-import org.firstinspires.ftc.teamcode.yise.DriveClass;
-import org.firstinspires.ftc.teamcode.yise.Hood;
-import org.firstinspires.ftc.teamcode.yise.Ledclass;
-import org.firstinspires.ftc.teamcode.yise.Parameters;
-import org.firstinspires.ftc.teamcode.yise.ShooterClass;
-import org.firstinspires.ftc.teamcode.yise.ShooterExecutionClass;
-import org.firstinspires.ftc.teamcode.yise.ShotPatternManager;
-import org.firstinspires.ftc.teamcode.yise.Spindexer;
-import org.firstinspires.ftc.teamcode.yise.Turret;
-import org.firstinspires.ftc.teamcode.yise.lifter;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 @TeleOp(name = "BallBot", group = "Ball Bot")
 public class BallBotMainDrive extends LinearOpMode {
 
@@ -33,12 +36,31 @@ public class BallBotMainDrive extends LinearOpMode {
     private ElapsedTime homingTimer = new ElapsedTime();
     private ElapsedTime snapTimer = new ElapsedTime();
     private boolean modeTogglePressed = false;
-
     private static final int LEFT_LIMIT = -1370;
     public boolean once = true;
     private static final int CENTER_TARGET = -685;
     private static final int TOLERANCE = 10;
     private boolean shooting = false;
+
+    private double csvPress1 = 0.0;
+    private double csvPress2 = 0.0;
+    private double csvPress3 = 0.0;
+    private double csvPressAvg = 0.0;
+
+    private double csvAvg1 = 0.0;
+    private double csvAvg2 = 0.0;
+    private double csvAvg3 = 0.0;
+    private double csvOverall = 0.0;
+
+    private double csvMoveToSiloSec = 0.0;
+    private double csvSpinWaitSec = 0.0;
+    private double csvSpinUpSec = 0.0;
+    private double csvFireLiftUpSec = 0.0;
+    private double csvFireLiftDownSec = 0.0;
+
+    private int csvTargetSilo = -1;
+    private double csvTargetAngle = 0.0;
+
 
     // ------------------------------
 
@@ -64,6 +86,7 @@ public class BallBotMainDrive extends LinearOpMode {
     boolean a;
     boolean x;
     private final ElapsedTime runtime = new ElapsedTime();
+    private final ElapsedTime ledTimer = new ElapsedTime();
     private final ElapsedTime logTimer = new ElapsedTime();
     private PrintWriter logWriter = null;
     private String logFilePath = null;
@@ -123,9 +146,9 @@ public class BallBotMainDrive extends LinearOpMode {
 
         hood.stop();
 
-        spin.initSilos();
+        //spin.initSilos();
 
-        spin.goToSilo2();
+        //spin.goToSilo2();
         lifter.setDown();
 
         waitForStart();
@@ -313,7 +336,8 @@ public class BallBotMainDrive extends LinearOpMode {
             }
 
 
-            if ((turret.getID() == 20 || turret.getID() == 24 && !shooting)){
+            if ((turret.getID() == 20 || turret.getID() == 24) && !shooting) {
+
                 led1.setBlue();
                 led2.setBlue();
                 led3.setBlue();
@@ -321,7 +345,7 @@ public class BallBotMainDrive extends LinearOpMode {
                 led1.setOff();
                 led2.setOff();
                 led3.setOff();
-                runtime.reset();
+                ledTimer.reset();
             } else if (shooting){
                 led1.setGreen();
                 led2.setGreen();
@@ -332,10 +356,9 @@ public class BallBotMainDrive extends LinearOpMode {
             if (gamepad1.right_trigger > 0.75 && !shooting) {
                 intake.setPower(1);
                 led1.setBlue();
-
                 walleft.setPower(1);
                 wallright.setPower(1);
-                spin.setManual(.2);
+                spin.startManualCycle();
                 once = true;
 
             } else if (gamepad1.left_trigger > .75 && !shooting) {
@@ -348,13 +371,6 @@ public class BallBotMainDrive extends LinearOpMode {
                 intake.setPower(-.6);
                 walleft.setPower(-1);
                 wallright.setPower(-1);
-                spin.setManual(0);
-                once = true;
-            } else if (gamepad2.dpad_right){
-                spin.setManual(0.045);
-                once = true;
-            } else if (gamepad2.dpad_left){
-                spin.setManual(-0.065);
                 once = true;
             } else {
                 intake.setPower(0);
@@ -380,9 +396,17 @@ public class BallBotMainDrive extends LinearOpMode {
             // --- HOOD & FOOT ---
             if (gamepad1.dpad_down) {
                 foot.setPower(0.557);
+                //spin.goToPose(0);
+            }
+            else if (gamepad1.dpad_left) {
+                spin.goToPose(0);
             }
             else if (gamepad1.dpad_up) {
                 foot.setPower(-0.25);
+                //spin.goToPose(0.5);
+            }else if (gamepad1.dpad_right) {
+                foot.setPower(-0.25);
+                spin.goToPose(1);
             }
 
             if (gamepad2.dpad_up && !autoShoot.isBusy()) {
@@ -493,7 +517,12 @@ public class BallBotMainDrive extends LinearOpMode {
                     File dir = new File("/sdcard/FIRST");
                     if (!dir.exists()) dir.mkdirs();
 
-                    logFilePath = "/sdcard/FIRST/telemetry_" + System.currentTimeMillis() + ".csv";
+                    String timestamp = new SimpleDateFormat(
+                            "yyyyMMdd_HHmmss",
+                            Locale.US
+                    ).format(new Date());
+
+                    logFilePath = "/sdcard/FIRST/telemetry_" + timestamp + ".csv";
                     logWriter = new PrintWriter(new FileWriter(logFilePath));
 
                     logWriter.println(
@@ -501,10 +530,26 @@ public class BallBotMainDrive extends LinearOpMode {
                                     "input_x,input_y,input_turn," +
                                     "trans_x,trans_y,rotation_cmd," +
                                     "lf,rf,lb,rb,total_power," +
+                                    "applied_lf,applied_rf,applied_lb,applied_rb," +
+                                    "drive_field_mode,drive_dpad_active,drive_dt,battery_volt," +
                                     "pose_x,pose_y,pose_h," +
+
+                                    "sh_mode,sh_targetRPM,sh_currentRPM,sh_errorRPM,sh_volt,sh_pose,sh_spinupTime," +
+
+                                    "turret_mode,turret_power,turret_pose,turret_id,turret_pipeline," +
+
+                                    "lift_pose,lift_volt,lift_err,lift_mode,lift_up,lift_down," +
+
+                                    "shoot_state," +
+
                                     "spx_mode,spx_currentAngle,spx_targetAngle,spx_error,spx_appliedPower," +
-                                    "silo1,silo2,silo3"
+                                    "silo1,silo2,silo3," +
+                                    "btn_a,btn_x,btn_g1_rt,btn_g1_lt,btn_g1_rb,btn_g2_y," +
+                                    "press_shot1,press_shot2,press_shot3,press_avg," +
+                                    "avg_shot1,avg_shot2,avg_shot3,avg_overall," +
+                                    "action_target_silo,action_target_angle,move_to_silo_s,spin_wait_s,spin_up_s,fire_lift_up_s,fire_lift_down_s"
                     );
+
 
                     logWriter.flush();
                     logTimer.reset();
@@ -528,8 +573,16 @@ public class BallBotMainDrive extends LinearOpMode {
             spin.sampleSensorsNow();
             spin.update();             // 2️⃣ process logic
             Spindexer.TelemetryPacket spina = spin.getTelemetry(); // 3️⃣ snapshot
-            //telemetry getter
+            //drive telemetry getter
             DriveClass.DriveTelemetry d = drive.getDriveTelemetry();
+            double appliedLF = d.appliedLF;
+            double appliedRF = d.appliedRF;
+            double appliedLB = d.appliedLB;
+            double appliedRB = d.appliedRB;
+
+            boolean driveFieldMode = d.fieldOrientedEnabled;
+            boolean driveDpadActive = d.dpadActive;
+            double driveDt = d.dt;
             // --- Update spindexer & autoShoot ---
             hood.update();
             Hood.TelemetryPacket H = hood.getTelemetry();
@@ -538,6 +591,7 @@ public class BallBotMainDrive extends LinearOpMode {
 
 // --- TELEMETRY ---
 // SHOOTER
+            /*
             shooter.updateTelemetry();
             ShooterClass.ShooterTelemetry s = shooter.getTelemetry();
             telemetry.addLine("=== SHOOTER ===");
@@ -550,6 +604,29 @@ public class BallBotMainDrive extends LinearOpMode {
             telemetry.addData("spin up time", s.spinupTimeSec);
 
 // DRIVE
+            // --- SHOOTER TIMING TELEMETRY ---
+            double[] lastShotsTelemetry = autoShoot.getLastCompletedPressShotTimes();
+            telemetry.addLine("=== SHOOT TIMING ===");
+            telemetry.addData("Press Shot1", "%.3f", lastShotsTelemetry[0]);
+            telemetry.addData("Press Shot2", "%.3f", lastShotsTelemetry[1]);
+            telemetry.addData("Press Shot3", "%.3f", lastShotsTelemetry[2]);
+            telemetry.addData("Press Avg", "%.3f", autoShoot.getLastCompletedPressAverage());
+
+            telemetry.addLine("--- GLOBAL AVERAGES ---");
+            telemetry.addData("Avg Shot1", "%.3f", autoShoot.getGlobalAverageShot1());
+            telemetry.addData("Avg Shot2", "%.3f", autoShoot.getGlobalAverageShot2());
+            telemetry.addData("Avg Shot3", "%.3f", autoShoot.getGlobalAverageShot3());
+            telemetry.addData("Avg Overall", "%.3f", autoShoot.getGlobalOverallAverage());
+
+            // optional: show which buttons are pressed (safety)
+            telemetry.addLine("--- BUTTONS ---");
+            telemetry.addData("A", "%b", a);
+            telemetry.addData("X", "%b", x);
+            telemetry.addData("G1 RT>", "%b", gamepad1.right_trigger > 0.75);
+            telemetry.addData("G1 LT>", "%b", gamepad1.left_trigger > 0.75);
+            telemetry.addData("G1 RB", "%b", gamepad1.right_bumper);
+            telemetry.addData("G2 Y", "%b", gamepad2.y);
+
             telemetry.addLine("=== FIELD DRIVE ===");
             telemetry.addData("Speed Mode", d.currentSpeed);
             telemetry.addData("Heading (deg)", "%.2f", d.headingDeg);
@@ -644,32 +721,132 @@ public class BallBotMainDrive extends LinearOpMode {
             telemetry.addData("Blue", FLC.blue());
             telemetry.addData("Red", FLC.red());
             telemetry.addData("Green", FLC.green());
-            telemetry.update();
 
-            if (logWriter != null && logTimer.seconds() >= 0.1) {
+           telemetry.update();
+           */
+
+            if (logWriter != null && logTimer.seconds() > 0.1) {
 
                 double now = runtime.seconds();
 
                 Spindexer.TelemetryPacket spx = spin.getTelemetry();
+                shooter.updateTelemetry();
+                ShooterClass.ShooterTelemetry s = shooter.getTelemetry();
+
+                String turretPose = String.valueOf(turret.getPose());
+                String shPose = String.valueOf(s.pose);
+
+                int turretPipeline = turret.limelight.getStatus().getPipelineIndex();
+                int turretId = turret.getID();
+                double turretPower = turret.turretPower;
+
+                String shootState = autoShoot.getStateName();
 
                 double totalPower =
                         Math.abs(d.lf) + Math.abs(d.rf) +
                                 Math.abs(d.lb) + Math.abs(d.rb);
 
+                // --- gather shooter timing & averages (single synchronized calls to getters) ---
+                double[] lastShots = autoShoot.getLastCompletedPressShotTimes();
+                double lastPressAvg = autoShoot.getLastCompletedPressAverage();
+
+                double globalAvg1 = autoShoot.getGlobalAverageShot1();
+                double globalAvg2 = autoShoot.getGlobalAverageShot2();
+                double globalAvg3 = autoShoot.getGlobalAverageShot3();
+                double globalOverall = autoShoot.getGlobalOverallAverage();
+
+                if (!Double.isNaN(lastShots[0])) csvPress1 = lastShots[0];
+                if (!Double.isNaN(lastShots[1])) csvPress2 = lastShots[1];
+                if (!Double.isNaN(lastShots[2])) csvPress3 = lastShots[2];
+                if (!Double.isNaN(lastPressAvg)) csvPressAvg = lastPressAvg;
+
+                if (!Double.isNaN(globalAvg1)) csvAvg1 = globalAvg1;
+                if (!Double.isNaN(globalAvg2)) csvAvg2 = globalAvg2;
+                if (!Double.isNaN(globalAvg3)) csvAvg3 = globalAvg3;
+                if (!Double.isNaN(globalOverall)) csvOverall = globalOverall;
+
+                csvTargetSilo = (autoShoot.getLastTargetSiloIndex()) + 1;
+                csvTargetAngle = autoShoot.getLastTargetAngleDeg();
+                csvMoveToSiloSec = autoShoot.getLastMoveToSiloSec();
+                csvSpinWaitSec = autoShoot.getLastSpinWaitSec();
+                csvSpinUpSec = autoShoot.getLastSpinUpSec();
+                csvFireLiftUpSec = autoShoot.getLastFireLiftUpSec();
+                csvFireLiftDownSec = autoShoot.getLastFireLiftDownSec();
+
+
+                // button/safety flags
+                boolean btnA = a; // edge state you already track
+                boolean btnX = x;
+                boolean g1Rt = gamepad1.right_trigger > 0.75;
+                boolean g1Lt = gamepad1.left_trigger > 0.75;
+                boolean g1Rb = gamepad1.right_bumper;
+                boolean g2Y  = gamepad2.y;
+
+                double batteryVolt = getBatteryVoltage();
                 logWriter.printf(
                         "%.3f," +
                                 "%.4f,%.4f,%.4f," +
                                 "%.4f,%.4f,%.4f," +
                                 "%.4f,%.4f,%.4f,%.4f,%.4f," +
+                                "%.4f,%.4f,%.4f,%.4f," +       // applied_lf,applied_rf,applied_lb,applied_rb
+                                "%b,%b,%.4f," +// drive_field_mode, drive_dpad_active, drive_dt
+                                "%.3f," +
                                 "%.4f,%.4f,%.4f," +
-                                "%s,%.2f,%.2f,%.2f,%.3f," +
-                                "%s,%s,%s%n",
 
+                                "%s,%.2f,%.1f,%.1f,%.3f,%s,%.3f," +
+
+                                "%s,%.3f,%s,%d,%d," +
+
+                                "%.3f,%.3f,%.3f,%s,%b,%b," +
+
+                                "%s," +
+
+                                "%s,%.2f,%.2f,%.2f,%.3f," +
+                                "%s,%s,%s," +
+                                "%b,%b,%b,%b,%b,%b," +
+                                "%.4f,%.4f,%.4f,%.4f," +
+                                "%.4f,%.4f,%.4f,%.4f," +
+                                "%d,%.2f,%.4f,%.4f,%.4f,%.4f,%.4f%n",
                         now,
                         d.rawX, d.rawY, d.rawTurn,
                         d.tx_field, d.ty_field, d.rotationCmd,
                         d.lf, d.rf, d.lb, d.rb, totalPower,
+                        d.appliedLF,
+                        d.appliedRF,
+                        d.appliedLB,
+                        d.appliedRB,
+                        driveFieldMode,
+                        driveDpadActive,
+
+                        driveDt,
+
+                        batteryVolt,
+
                         d.pose.x, d.pose.y, d.pose.h,
+
+                        s.mode,
+                        s.targetRPM,
+                        s.currentRPM,
+                        s.errorRPM,
+                        s.motorPower,
+                        shPose,
+                        s.spinupTimeSec,
+
+                        turret.mode,
+                        turretPower,
+                        turretPose,
+                        turretId,
+                        turretPipeline,
+
+                        l.position,
+                        l.voltage,
+                        l.error,
+                        l.mode,
+                        lifter.isUp(),
+                        lifter.isDown(),
+
+                        shootState,
+
                         spx.mode,
                         spx.currentAngle,
                         spx.targetAngle,
@@ -677,12 +854,35 @@ public class BallBotMainDrive extends LinearOpMode {
                         spx.appliedPower,
                         spx.siloColors[0],
                         spx.siloColors[1],
-                        spx.siloColors[2]
+                        spx.siloColors[2],
+                        btnA,
+                        btnX,
+                        g1Rt,
+                        g1Lt,
+                        g1Rb,
+                        g2Y,
+                        csvPress1,
+                        csvPress2,
+                        csvPress3,
+                        csvPressAvg,
+                        csvAvg1,
+                        csvAvg2,
+                        csvAvg3,
+                        csvOverall,
+                        csvTargetSilo,
+                        csvTargetAngle,
+                        csvMoveToSiloSec,
+                        csvSpinWaitSec,
+                        csvSpinUpSec,
+                        csvFireLiftUpSec,
+                        csvFireLiftDownSec
                 );
+
 
                 logWriter.flush();
                 logTimer.reset();
             }
+
 
 
         } // end while opModeIsActive
@@ -735,5 +935,12 @@ public class BallBotMainDrive extends LinearOpMode {
         return true;
     }
 
-
+    private double getBatteryVoltage() {
+        double best = 0.0;
+        for (VoltageSensor vs : hardwareMap.voltageSensor) {
+            double v = vs.getVoltage();
+            if (v > best) best = v;
+        }
+        return best;
+    }
 }
