@@ -42,7 +42,7 @@ public class autoFar extends LinearOpMode {
         // instantiate drive class (MecanumDrive) at a particular pose.
         Pose2d initialPose = null;
         if (Objects.equals(alliance, "RED")) {
-            initialPose = new Pose2d(-63, -12, Math.toRadians(90));
+            initialPose = new Pose2d(-63, -12, Math.toRadians(270));
         }else if (Objects.equals(alliance, "BLUE")) {
             initialPose = new Pose2d(-63, 12, Math.toRadians(90));
         }
@@ -55,32 +55,32 @@ public class autoFar extends LinearOpMode {
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
                 .strafeTo(new Vector2d(-33, -12))
                 .waitSeconds(2)
-                .strafeTo(new Vector2d(-33,-33))
+                .strafeTo(new Vector2d(-33,-50))
                 .waitSeconds(2)
-                .strafeTo(new Vector2d(-62,-12))
-                .waitSeconds(8)
+                .strafeTo(new Vector2d(-61,-12))
+                .waitSeconds(6)
                 //the long wait is for shooting 3 balls
                 .strafeTo(new Vector2d(-11,-12))
                 .waitSeconds(2)
-                .strafeTo(new Vector2d(-11,-55))
+                .strafeTo(new Vector2d(-11,-50))
                 .waitSeconds(2)
-                .strafeTo(new Vector2d(-62,-12))
-                .waitSeconds(8);
+                .strafeTo(new Vector2d(-61,-12))
+                .waitSeconds(6);
                 //the long wait is for shooting 3 balls
         // tab two is for blue
         TrajectoryActionBuilder tab2 = drive.actionBuilder(initialPose)
                 .strafeTo(new Vector2d(-33, 12))
                 .waitSeconds(2)
-                .strafeTo(new Vector2d(-33,33))
+                .strafeTo(new Vector2d(-33,50))
                 .waitSeconds(2)
-                .strafeTo(new Vector2d(-62,12))
+                .strafeTo(new Vector2d(-61,12))
                 .waitSeconds(8)
                 //the long wait is for shooting 3 balls
                 .strafeTo(new Vector2d(-11,12))
                 .waitSeconds(2)
-                .strafeTo(new Vector2d(-11, 55))
+                .strafeTo(new Vector2d(-11, 50))
                 .waitSeconds(2)
-                .strafeTo(new Vector2d(-62,12))
+                .strafeTo(new Vector2d(-61,12))
                 .waitSeconds(8);
                 //the long wait is for shooting 3 balls
 

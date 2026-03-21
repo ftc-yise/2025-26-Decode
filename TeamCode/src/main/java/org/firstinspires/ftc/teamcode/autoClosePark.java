@@ -53,10 +53,12 @@ public class autoClosePark extends LinearOpMode {
         // we build our trajectories during initialization to avoid wasting time during auto
         // tab one is for red
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
+                .waitSeconds(6)
                 .strafeTo(new Vector2d(53, -40))
                 .waitSeconds(3);
         // tab two is for blue
         TrajectoryActionBuilder tab2 = drive.actionBuilder(initialPose)
+                .waitSeconds(6)
                 .strafeTo(new Vector2d(-53, 40))
                 .waitSeconds(3);
 
