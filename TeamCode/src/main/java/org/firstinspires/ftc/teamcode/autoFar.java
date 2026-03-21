@@ -21,9 +21,9 @@ import java.util.Objects;
 
 
 @Config
-@Autonomous(name = "autoFarPark", group = "Linear Opmode")
+@Autonomous(name = "autoFar", group = "Linear Opmode")
 
-public class autoFarPark extends LinearOpMode {
+public class autoFar extends LinearOpMode {
     // default alliance is red
     public String alliance = "RED";
     // this will hold the trajectoryAction we select based on alliance color
@@ -42,9 +42,9 @@ public class autoFarPark extends LinearOpMode {
         // instantiate drive class (MecanumDrive) at a particular pose.
         Pose2d initialPose = null;
         if (Objects.equals(alliance, "RED")) {
-            initialPose = new Pose2d(-63, -12, Math.toRadians(0));
+            initialPose = new Pose2d(-63, -12, Math.toRadians(90));
         }else if (Objects.equals(alliance, "BLUE")) {
-            initialPose = new Pose2d(-63, 12, Math.toRadians(0));
+            initialPose = new Pose2d(-63, 12, Math.toRadians(90));
         }
         MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
         //Intake intake = new Intake(hardwareMap);
@@ -53,12 +53,36 @@ public class autoFarPark extends LinearOpMode {
         // we build our trajectories during initialization to avoid wasting time during auto
         // tab one is for red
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
-                .strafeTo(new Vector2d(-63, -14))
-                .waitSeconds(3);
+                .strafeTo(new Vector2d(-33, -12))
+                .waitSeconds(2)
+                .strafeTo(new Vector2d(-33,-33))
+                .waitSeconds(2)
+                .strafeTo(new Vector2d(-62,-12))
+                .waitSeconds(8)
+                //the long wait is for shooting 3 balls
+                .strafeTo(new Vector2d(-11,-12))
+                .waitSeconds(2)
+                .strafeTo(new Vector2d(-11,-55))
+                .waitSeconds(2)
+                .strafeTo(new Vector2d(-62,-12))
+                .waitSeconds(8);
+                //the long wait is for shooting 3 balls
         // tab two is for blue
         TrajectoryActionBuilder tab2 = drive.actionBuilder(initialPose)
-                .strafeTo(new Vector2d(-63, 14))
-                .waitSeconds(3);
+                .strafeTo(new Vector2d(-33, 12))
+                .waitSeconds(2)
+                .strafeTo(new Vector2d(-33,33))
+                .waitSeconds(2)
+                .strafeTo(new Vector2d(-62,12))
+                .waitSeconds(8)
+                //the long wait is for shooting 3 balls
+                .strafeTo(new Vector2d(-11,12))
+                .waitSeconds(2)
+                .strafeTo(new Vector2d(-11, 55))
+                .waitSeconds(2)
+                .strafeTo(new Vector2d(-62,12))
+                .waitSeconds(8);
+                //the long wait is for shooting 3 balls
 
         waitForStart();
         if (isStopRequested()) return;
