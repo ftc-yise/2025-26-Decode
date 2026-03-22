@@ -53,6 +53,8 @@ public class autoFar extends LinearOpMode {
         // we build our trajectories during initialization to avoid wasting time during auto
         // tab one is for red
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
+                .waitSeconds(6)
+                //the long wait is for shooting 3 balls
                 .strafeTo(new Vector2d(-33, -12))
                 .waitSeconds(2)
                 .strafeTo(new Vector2d(-33,-50))
@@ -69,6 +71,8 @@ public class autoFar extends LinearOpMode {
                 //the long wait is for shooting 3 balls
         // tab two is for blue
         TrajectoryActionBuilder tab2 = drive.actionBuilder(initialPose)
+                .waitSeconds(6)
+                //the long wait is for shooting 3 balls
                 .strafeTo(new Vector2d(-33, 12))
                 .waitSeconds(2)
                 .strafeTo(new Vector2d(-33,50))

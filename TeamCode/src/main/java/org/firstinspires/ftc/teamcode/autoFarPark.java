@@ -54,11 +54,13 @@ public class autoFarPark extends LinearOpMode {
         // tab one is for red
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
                 .waitSeconds(6)
+                //the long wait is for shooting 3 balls
                 .strafeTo(new Vector2d(-63, -14))
                 .waitSeconds(3);
         // tab two is for blue
         TrajectoryActionBuilder tab2 = drive.actionBuilder(initialPose)
                 .waitSeconds(6)
+                //the long wait is for shooting 3 balls
                 .strafeTo(new Vector2d(-63, 14))
                 .waitSeconds(3);
 
