@@ -4,6 +4,7 @@ import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 import org.firstinspires.ftc.teamcode.yise.Parameters;
 
@@ -15,18 +16,28 @@ import java.util.Arrays;
 /**
  * Spindexer — positional-servo version (pose-driven for silos)
  *
+ * This subsystem controls the spindexer servo that rotates the robot’s
+ * silo mechanism to specific positions.
+ *
  * SILO POSITIONS:
  *  - Silo1 -> 0.0
  *  - Silo2 -> 0.5
  *  - Silo3 -> 1.0
  *
- * Other behavior preserved (sensors, logging, manual cycle). TARGET mode (setTarget(angle))
- * still maps 0..360° -> 0..1 as a fallback, but silo commands bypass angle math entirely.
+ * Other behavior preserved:
+ * - sensor reading / color detection
+ * - logging
+ * - manual cycle
+ *
+ * TARGET mode (setTarget(angle)) still maps 0..360° -> 0..1 as a fallback,
+ * but direct silo commands bypass angle math entirely and go to fixed positions.
  */
 public class Spindexer {
 
     // ─────────────────────────────────────────────────────────────────────
-    // MODES
+    // MODES / STATE STORAGE
+    // These fields track what the spindexer currently believes each silo contains,
+    // along with some historical tracking for sensor ownership and filtering.
     // ─────────────────────────────────────────────────────────────────────
     public BallColor[] siloColors = new BallColor[3];
     private int[] lastSeenSiloBySensor = {-1, -1, -1};
@@ -34,6 +45,15 @@ public class Spindexer {
     // smoothing / filtering (position-specific)
     private double lastPositionFiltered = 0.0;
 
+    /**
+     * Operational modes for the spindexer.
+     *
+     * NEUTRAL = do not actively move to a fixed target
+     * SILO_1 / SILO_2 / SILO_3 = move directly to one of the preset silo poses
+     * MANUAL = cycle through fixed poses on a timer
+     * TARGET = move to an arbitrary target position or angle fallback
+     * SEQUENCE = run a fixed multi-step sequence
+     */
     public enum Mode {
         NEUTRAL,
         SILO_1,
@@ -43,99 +63,129 @@ public class Spindexer {
         TARGET,     // map arbitrary angle -> position (fallback)
         SEQUENCE
     }
+
+    /**
+     * Color classification for what a silo currently contains.
+     *
+     * GREEN and PURPLE are the two detectable ball colors.
+     * NONE means no usable ball is detected.
+     */
     public enum BallColor {
         GREEN,
         PURPLE,
         NONE
     }
 
+    // Current detected color state for each silo slot
     private final BallColor[] silos = {
             BallColor.NONE,
             BallColor.NONE,
             BallColor.NONE
     };
 
+    // Shared silo angle variables used by older logic / initialization
     public static double silo1;
     public static double silo2;
     public static double silo3;
 
-    private static final double SILO_1_TARGET_DEG = 64.5;
-    private static final double SILO_2_TARGET_DEG = 180.0;
-    private static final double SILO_3_TARGET_DEG = 294.0;
+    // Hardcoded target angles for the three named silos
+    private static final double SILO_1_TARGET_DEG = 303.5;
+    private static final double SILO_2_TARGET_DEG = 183.5;
+    private static final double SILO_3_TARGET_DEG = 60.5;
 
-    // keep your existing angle-based silo definitions (not used for direct silo commands now,
-    // but retained for backward compatibility / initSilos)
+    // Keep existing angle-based silo definitions for compatibility
+    // These are still used by color matching and initSilos().
     public static double[] SILO_ANGLES = {
             silo1,   // SILO_1
             silo2,   // SILO_2
             silo3    // SILO_3
     };
 
-    // fixed positions for the three silos: silo1 -> 0.0, silo2 -> 0.5, silo3 -> 1.0
+    // Fixed servo positions for the three silos
+    // These are the actual positions used by the new positional-servo behavior.
     public static double[] SILO_POSITIONS = {
             0.0,   // SILO_1 -> servo position 0.0
             0.5,   // SILO_2 -> servo position 0.5
             1.0    // SILO_3 -> servo position 1.0
     };
 
+    // Sensor offsets used to map each color sensor into the spindexer's world angle space
     private static final double[] SENSOR_OFFSETS = {
             0.0,    // middle
             120.0,  // backLeft
             240.0   // backRight
     };
 
+    // Current mode of the spindexer
     public Mode mode = Mode.NEUTRAL;
 
-    // Hardware
-    private Servo spindexer;              // positional servo
-    private AnalogInput encoder;
-    private ColorSensor middle = null;
-    private ColorSensor backLeft = null;
-    private ColorSensor backRight = null;
+    // ─────────────────────────────────────────────────────────────────────
+    // HARDWARE
+    // ─────────────────────────────────────────────────────────────────────
 
-    // Angle variables (kept for fallback)
+    // Positional servo that physically rotates the spindexer
+    private Servo spindexer;
+
+    // Analog encoder input used to estimate current spindexer angle
+    private AnalogInput encoder;
+
+    // Color sensors on the robot
+    private ColorSensor middleT = null;
+    private ColorSensor backLeftT = null;
+    private ColorSensor backRightT = null;
+    private ColorSensor middleB = null;
+    private ColorSensor backLeftB = null;
+    private ColorSensor backRightB = null;
+
+    // Angle variables (retained for fallback / compatibility with older logic)
     public double targetAngleDeg = 0;
 
-    // Direct target position (0..1) used for silo/manual modes
+    // Direct target servo position in the range 0..1
+    // Used by silo modes, manual mode, and pose-based fallback.
     private double targetPosition = 0.0;
 
-    // Constants
+    // Encoder voltage range used to convert raw voltage to 0..360 degrees
     private final double MAX_VOLTAGE = 3.3;
 
-    // reading gate
+    // Controls whether color sensor updates are allowed right now
+    // This is useful during shooting so sensor state doesn’t change mid-cycle.
     private boolean sensorUpdatesEnabled = true;
 
-    // Velocity / angle helpers (still used for some checks)
+    // Angle/velocity helpers kept from the earlier implementation
     private double lastAngle = 0.0;            // last measured angle (deg)
     private long lastTimeMs = System.currentTimeMillis();
 
-    // Position rate limiting (keeps position changes smooth)
+    // Position rate limiting to keep servo movement smooth
     private double lastPosition = 0.0;
     private final double MAX_POSITION_DELTA = 0.12; // maximum allowed position change per loop
 
-    // Sequencing state
+    // Sequence state for multi-step automatic behavior
     private int siloStep = 0;
     private boolean sequenceActive = false;
 
-    // Manual cycling state
+    // Manual cycling state: automatically rotates through fixed poses over time
     private boolean manualCycleActive = false;
     private int manualCycleIndex = 0;
     private long lastManualCycleMs = 0;
     private static final long MANUAL_CYCLE_MS = 700; // ms between pose switches in manual cycle
 
-    // Angle tolerance for various checks (kept for color/silo-angle fallback)
+    // Angle tolerance used by older angle-based matching logic
     private final double ANGLE_TOLERANCE = 0.5;
     private final double ANGLE_TOLERANCE_COLOR = 15;
 
-    // Position arrival tolerance (for latch)
+    // Timer used by some control paths
+    private final ElapsedTime timer = new ElapsedTime();
+
+    // Position arrival tolerance for "am I close enough?" checks
     private final double POSITION_TOLERANCE = 0.02; // ~2% of travel
 
-    // --- arrival latch ---
+    // Arrival latch: once the spindexer reaches the target, this can stay true
     private boolean atTargetLatched = false;
-
 
     // ─────────────────────────────────────────────────────────────────────
     // TELEMETRY STRUCT
+    // This object is used to expose the current spindexer state to other code
+    // without requiring the caller to read hardware directly.
     // ─────────────────────────────────────────────────────────────────────
     public static class TelemetryPacket {
         public Mode mode;
@@ -151,28 +201,35 @@ public class Spindexer {
         public BallColor[] siloColors = new BallColor[3];
     }
 
+    // Current telemetry snapshot
     private TelemetryPacket t = new TelemetryPacket();
 
-    // CSV Logging
+    // CSV logging support
     private FileWriter csv;
     private DecimalFormat df = new DecimalFormat("0.00");
 
-    // Constructor
+    // Constructor: binds hardware and initializes the spindexer to a known position
     public Spindexer(HardwareMap hardwaremap) {
         spindexer = hardwaremap.get(Servo.class, "spin");
         encoder = hardwaremap.get(AnalogInput.class, "spinInput");
 
-        middle = hardwaremap.get(ColorSensor.class, "middlecolorsensor");
-        backLeft = hardwaremap.get(ColorSensor.class, "BLcolorsensor");
-        backRight = hardwaremap.get(ColorSensor.class, "BRcolorsensor");
+        // Top color sensors
+        middleT = hardwaremap.get(ColorSensor.class, "middlecolorsensorT");
+        backLeftT = hardwaremap.get(ColorSensor.class, "BLcolorsensorT");
+        backRightT = hardwaremap.get(ColorSensor.class, "BRcolorsensorT");
 
-        // init lastAngle so first velocity estimate is small
+        // Bottom color sensors
+        middleB = hardwaremap.get(ColorSensor.class, "middlecolorsensorB");
+        backLeftB = hardwaremap.get(ColorSensor.class, "BLcolorsensorB");
+        backRightB = hardwaremap.get(ColorSensor.class, "BRcolorsensorB");
+
+        // Initialize angle estimate from encoder so the first motion estimate is not extreme
         double v = encoder.getVoltage();
         lastAngle = normalize((v / MAX_VOLTAGE) * 360.0);
         lastPositionFiltered = angleToPosition(lastAngle);     // initialize position filter
         lastTimeMs = System.currentTimeMillis();
 
-        // initialize servo to current position
+        // Initialize servo at the current filtered position
         spindexer.setPosition(lastPositionFiltered);
         lastPosition = lastPositionFiltered;
         targetPosition = lastPositionFiltered;
@@ -180,7 +237,12 @@ public class Spindexer {
 
     // ─────────────────────────────────────────────────────────────────────
     // MODE COMMANDS
+    // These methods are the primary control API for the rest of the robot code.
     // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Put the spindexer into a passive resting state.
+     */
     public void setNeutral() {
         mode = Mode.NEUTRAL;
         sequenceActive = false;
@@ -188,18 +250,27 @@ public class Spindexer {
     }
 
     // direct silo commands: set the fixed position and mode
+    /**
+     * Move directly to silo 1 using a fixed servo position.
+     */
     public void goToSilo1() {
         targetPosition = SILO_POSITIONS[0];
         targetAngleDeg = SILO_1_TARGET_DEG;
         mode = Mode.SILO_1;
     }
 
+    /**
+     * Move directly to silo 2 using a fixed servo position.
+     */
     public void goToSilo2() {
         targetPosition = SILO_POSITIONS[1];
         targetAngleDeg = SILO_2_TARGET_DEG;
         mode = Mode.SILO_2;
     }
 
+    /**
+     * Move directly to silo 3 using a fixed servo position.
+     */
     public void goToSilo3() {
         targetPosition = SILO_POSITIONS[2];
         targetAngleDeg = SILO_3_TARGET_DEG;
@@ -209,27 +280,51 @@ public class Spindexer {
     /**
      * Start a non-blocking manual cycle through poses:
      * Silo1 -> Silo2 -> Silo3 -> repeat.
+     *
+     * This method does not block program execution; it only updates the target
+     * and lets update() continue the motion over time.
      */
     public void startManualCycle() {
-        manualCycleActive = true;
-        manualCycleIndex = 0;
-        lastManualCycleMs = System.currentTimeMillis();
-        targetPosition = SILO_POSITIONS[manualCycleIndex];
+        double t = timer.seconds();
+        if (t < 1.5) {
+            goToSilo1();
+        } else if (t < 2.5) {
+            goToSilo3();
+        } else {
+            goToSilo2();
+            if (t > 4) {
+                timer.reset();
+            }
+        }
+
         mode = Mode.MANUAL;
     }
 
+    /**
+     * Stops the manual pose cycle and returns to neutral mode.
+     */
     public void stopManualCycle() {
         manualCycleActive = false;
         mode = Mode.NEUTRAL;
     }
 
-    // set an arbitrary angle target (kept as fallback if you want to use angle mapping)
+    /**
+     * Set an arbitrary angle target.
+     *
+     * This is retained for backward compatibility or fallback use cases where
+     * the system wants angle-based targeting instead of a direct silo pose.
+     */
     public void setTarget(double angleDeg) {
         targetAngleDeg = normalize(angleDeg);
         mode = Mode.TARGET;
     }
 
-    // allow direct pose commands (convenience)
+    /**
+     * Directly command a servo pose in the range 0..1.
+     *
+     * This is useful for manual placement or preset positions that do not
+     * require angle math.
+     */
     public void goToPose(double val) {
         targetPosition = Range.clip(val, 0.0, 1.0);
         mode = Mode.TARGET; // use TARGET so update() writes the mapped pos (we check targetPosition first)
@@ -237,13 +332,27 @@ public class Spindexer {
 
     // ─────────────────────────────────────────────────────────────────────
     // AUTOMATIC SILO SEQUENCE
+    // This is a fixed multi-step pattern of silo movements.
     // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Starts the automated three-step silo sequence.
+     */
     public void startSequence() {
         siloStep = 0;
         sequenceActive = true;
         mode = Mode.SEQUENCE;
     }
 
+    /**
+     * Executes one step of the automatic sequence.
+     *
+     * The sequence goes:
+     *   step 0 -> Silo 2
+     *   step 1 -> Silo 3
+     *   step 2 -> Silo 1
+     *   step 3 -> finish
+     */
     private void runSequence() {
         if (!sequenceActive) return;
 
@@ -270,10 +379,16 @@ public class Spindexer {
         }
     }
 
-
-
     // ─────────────────────────────────────────────────────────────────────
     // UPDATE LOOP — CALL EVERY LOOP
+    //
+    // This is the core runtime method.
+    // It:
+    // 1. reads the encoder
+    // 2. updates silo color readings
+    // 3. runs any active sequence / manual cycle
+    // 4. computes the output servo position
+    // 5. updates telemetry and logging
     // ─────────────────────────────────────────────────────────────────────
     public void update() {
 
@@ -286,7 +401,7 @@ public class Spindexer {
             mapSensorsToSilos(current);
         }
 
-        // run sequence if needed
+        // Run sequence logic if sequence mode is active
         if (mode == Mode.SEQUENCE) runSequence();
 
         // Manual cycling handling (non-blocking): advance to next silo every MANUAL_CYCLE_MS
@@ -319,15 +434,14 @@ public class Spindexer {
         } else { // Mode.TARGET -> fallback mapping from angle to position
             // If a direct targetPosition was set (via goToPose or similar), prefer it
             appliedPosition = targetPosition;
-            // If targetPosition left at default (we'll detect a negative or equals lastPositionFiltered),
-            // fallback to mapping targetAngle
+            // If targetPosition left at default or invalid, fallback to angle mapping
             // (we initially set targetPosition to lastPositionFiltered, so this branch uses the explicit pos)
             if (Double.isNaN(appliedPosition) || appliedPosition < 0.0 || appliedPosition > 1.0) {
                 appliedPosition = angleToPosition(targetAngleDeg);
             }
         }
 
-        // smooth / rate-limit position changes then apply
+        // Smooth / rate-limit position changes, then apply them to the servo
         double outputPosition = positionRateLimit(appliedPosition);
         spindexer.setPosition(outputPosition);
 
@@ -359,13 +473,26 @@ public class Spindexer {
         }
     }
 
-    // Map angle (0..360) to servo position (0..1) — fallback when target isn't a named silo
+    // ─────────────────────────────────────────────────────────────────────
+    // POSITION / ANGLE CONVERSION
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Convert an angle in degrees (0..360) to a servo position (0..1).
+     *
+     * This is used as a fallback when the system is in TARGET mode and does
+     * not have a named silo target.
+     */
     private double angleToPosition(double angleDeg) {
         double normalized = normalize(angleDeg); // 0..360
         return normalized / 360.0;
     }
 
-    // Rate limit position changes (simple clamped delta per loop)
+    /**
+     * Rate-limit servo position changes so motion is smoother and less abrupt.
+     *
+     * This prevents large sudden jumps from happening in a single loop.
+     */
     private double positionRateLimit(double requested) {
         double diff = requested - lastPosition;
         double allowed = MAX_POSITION_DELTA;
@@ -383,10 +510,18 @@ public class Spindexer {
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // Map sensors -> angle -> silo index (ownership fixer) — unchanged
+    // SENSOR MAPPING
+    // These methods assign detected ball colors into the correct silo slots.
     // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Maps the current sensor readings into silo color slots.
+     *
+     * Each sensor is associated with a world-angle offset. The current spindexer
+     * angle is used to determine which silo each sensor is "looking at."
+     */
     private void mapSensorsToSilos(double currentAngle) {
-        ColorSensor[] sensors = { middle, backLeft, backRight };
+        ColorSensor[] sensors = { middleB, backLeftB, backRightB };
 
         for (int sensorIdx = 0; sensorIdx < sensors.length; sensorIdx++) {
             ColorSensor s = sensors[sensorIdx];
@@ -413,7 +548,11 @@ public class Spindexer {
         }
     }
 
-    // Call ONLY when aligned at a read/fire position
+    /**
+     * Reads the sensors immediately and writes the detected colors into the silo array.
+     *
+     * This should only be called when the spindexer is aligned at a known reading position.
+     */
     public void sampleSensorsNow() {
         double voltage = encoder.getVoltage();
         double current = normalize((voltage / MAX_VOLTAGE) * 360.0);
@@ -427,18 +566,30 @@ public class Spindexer {
         }
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // HELPER METHODS
+    // ─────────────────────────────────────────────────────────────────────
 
-    // HELPERS
+    /**
+     * Normalizes any angle into the range 0..360.
+     */
     private static double normalize(double angle) {
         angle %= 360;
         if (angle < 0) angle += 360;
         return angle;
     }
 
+    /**
+     * Returns whether the spindexer has reached its intended target.
+     */
     private boolean atTarget() {
         return atTargetLatched;
     }
 
+    /**
+     * Computes the shortest signed difference between two angles.
+     * Useful for comparing angles near wrap-around points like 0/360.
+     */
     private double smallestAngleError(double target, double current) {
         double diff = target - current;
         if (diff > 180) diff -= 360;
@@ -446,11 +597,17 @@ public class Spindexer {
         return diff;
     }
 
+    /**
+     * Clamps a value between a minimum and maximum.
+     */
     private double clamp(double p, double min, double max) {
         return Math.max(min, Math.min(max, p));
     }
 
-    // CSV logger
+    // ─────────────────────────────────────────────────────────────────────
+    // CSV LOGGER
+    // Writes basic telemetry to a CSV file if logging is enabled.
+    // ─────────────────────────────────────────────────────────────────────
     private void writeCSV(double angle, double target, double error) {
         if (csv == null) return;
         try {
@@ -463,8 +620,14 @@ public class Spindexer {
         } catch (IOException ignored) {}
     }
 
+    /**
+     * Returns the most recent telemetry snapshot.
+     */
     public TelemetryPacket getTelemetry() { return t; }
 
+    /**
+     * Stops motion and returns the system to neutral.
+     */
     public void stop() {
         // stop motion: set neutral and hold current position
         spindexer.setPosition(lastPosition); // hold last position
@@ -473,7 +636,12 @@ public class Spindexer {
         sequenceActive = false;
     }
 
-    // Return a BallColor using sensor thresholds (sensorIndex: 0=middle, 1=backLeft, 2=backRight)
+    /**
+     * Detects whether a sensor sees a GREEN, PURPLE, or NONE ball.
+     *
+     * Sensor thresholds differ slightly by sensor location because the
+     * sensors may have different lighting / viewing angles.
+     */
     private BallColor detectBall(ColorSensor s, int sensorIndex) {
         int g = s.green();
         int b = s.blue();
@@ -493,13 +661,18 @@ public class Spindexer {
         }
     }
 
-
+    /**
+     * Clears a silo’s stored color state.
+     */
     public void clearSilo(int index) {
         if (index >= 0 && index < silos.length) {
             silos[index] = BallColor.NONE;
         }
     }
 
+    /**
+     * Finds which silo angle the given angle most closely matches.
+     */
     private int angleToSilo(double angle) {
         for (int i = 0; i < 3; i++) {
             double error = smallestAngleError(SILO_ANGLES[i], angle);
@@ -508,14 +681,23 @@ public class Spindexer {
         return -1;
     }
 
+    /**
+     * Enables normal sensor updates during update().
+     */
     public void enableSensorUpdates() {
         sensorUpdatesEnabled = true;
     }
 
+    /**
+     * Disables sensor updates during a cycle when readings should stay stable.
+     */
     public void disableSensorUpdates() {
         sensorUpdatesEnabled = false;
     }
 
+    /**
+     * Convenience method to send the system to one of the three silo presets.
+     */
     public void goToSilo(int index) {
         switch (index) {
             case 0: goToSilo1(); break;
@@ -524,6 +706,12 @@ public class Spindexer {
         }
     }
 
+    /**
+     * Recomputes silo angles relative to the robot’s current spin location.
+     *
+     * This preserves the older angle-based logic so color matching and
+     * compatibility features keep working.
+     */
     public void initSilos() {
         silo1 = normalize(Parameters.spinLocation - 120);
         silo2 = normalize(Parameters.spinLocation);
