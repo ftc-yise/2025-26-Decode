@@ -795,12 +795,15 @@ public class BallBotMainDrive extends LinearOpMode {
             telemetry.addData("shots", autoShoot.shots);
 
 // TURRET
+            */
             telemetry.addLine("=== TURRET ===");
             telemetry.addData("Mode", turret.mode);
             telemetry.addData("Power", turret.turretPower);
             telemetry.addData("pose", turret.getPose());
             telemetry.addData("id", turret.getID());
+            telemetry.addData("tx", turret.getTx());
             telemetry.addData("pipeline", turret.limelight.getStatus().getPipelineIndex());
+            /*
 
 // SILOS
             telemetry.addLine("=== SILOS ===");
@@ -845,7 +848,7 @@ public class BallBotMainDrive extends LinearOpMode {
             telemetry.addData("Green", backRightB.green());
 
 //lift
-            */
+
             telemetry.addLine("=== LIFT ===");
             telemetry.addData("pose", l.position);
             telemetry.addData("volt", l.voltage);
@@ -853,7 +856,7 @@ public class BallBotMainDrive extends LinearOpMode {
             telemetry.addData("mode", l.mode);
             telemetry.addData("up", lifter.isUp());
             telemetry.addData("down", lifter.isDown());
-            /*
+
 
 //hood
 
@@ -864,13 +867,13 @@ public class BallBotMainDrive extends LinearOpMode {
             telemetry.addData("Target", "%.1f°", H.targetAngle);
             telemetry.addData("Error", "%.1f°", H.angleError);
             telemetry.addData("Power", "%.2f", H.appliedPower);
-            */
+
 
 
 
             telemetry.addData("limiit", limit.getState());
             telemetry.update();
-            /*
+
 
 
 

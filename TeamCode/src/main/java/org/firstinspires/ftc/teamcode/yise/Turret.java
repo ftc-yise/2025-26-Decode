@@ -16,8 +16,8 @@ import java.util.List;
 
 @Configurable
 public class Turret {
-    double mySlope = 0.15;
-    double myOffset = 0.25;
+    double mySlope = 0.25;
+    double myOffset = 0.35;
     double tx = 0.0;
     public int homePos = 295;       // Right side home
     public int farLimit = -1075;    // Left side home
@@ -27,14 +27,14 @@ public class Turret {
     // --- PID CONTROL CONSTANTS  ---
 
     // --- PIDF CONTROL CONSTANTS ---
-    public static double kP = 0.016;
-    public static double kI = 0.00089;
-    public static double kD = 0.0065;
-    public static double kF = 0.12;   // static friction feedforward
+    public static double kP = 0.022;
+    public static double kI = 0;
+    public static double kD = 0;
+    public static double kF = 0.13;   // static friction feedforward
 
-    public static double AUTO_MAX_POWER = 0.5;
-    public static double TARGET_TOLERANCE_DEG = 1.3;
-    public static double AUTO_MIN_POWER_FLOOR = 0.12;
+    public static double AUTO_MAX_POWER = 0.65;
+    public static double TARGET_TOLERANCE_DEG = 1;
+    public static double AUTO_MIN_POWER_FLOOR = 0.11;
 
     // --- ANALOG MANUAL CONTROL CONSTANTS  ---
     public static double MAX_MANUAL_POWER = 1.0;
@@ -59,7 +59,7 @@ public class Turret {
     LLResult result = null;
     public double turretPower = 0.0;
     public double pose = 0.0;
-    public double myTx = 0.0;
+    public double myTx = 0;
     public Limelight3A limelight;
     public DigitalChannel limit; // Digital device for limit switch instead of push sensor because I get more advanced control
     public Telemetry telemetry;
@@ -104,13 +104,6 @@ public class Turret {
     // Limit switch safety
     private double applySafety(double power) {
         // Digital sensors are TRUE when open, FALSE when pressed
-        boolean isPressed = !limit.getState();
-
-        if (isPressed) {
-            int pos = turret.getCurrentPosition();
-            if (pos > 10 && power > 0) return 0;
-            if (pos < -10 && power < 0) return 0;
-        }
         return Range.clip(power, -1.0, 1.0);
     }
 
@@ -172,78 +165,40 @@ public class Turret {
         result = limelight.getLatestResult();
         if (result != null && result.isValid()) {
             myTx = result.getTx();
-            turretPower = getTurretPower(myTx, myOffset, mySlope);
-            //telemetry.addData("Ty=", myTy);
+            turretPower = getTurretPower(myTx);
         } else {
             turretPower = 0;
         }
-        //telemetry.addData("Power=", turretPower);
-        //telemetry.update();
+
         turret.setPower(turretPower);
     }
-
     public void autoMode() {
         turret.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-
         mode = turretMode.AUTO;
+
         result = limelight.getLatestResult();
-        if (!result.isValid()) {
-            // hold last known encoder pos with small P-only encoder loop
-            double posError = lastKnownEncoderPos - turret.getCurrentPosition();
-            turret.setPower(Range.clip(posError * 0.004, -0.2, 0.2));
-            return;
-        }
-        lastKnownEncoderPos = turret.getCurrentPosition();
 
-        if (result != null && result.isValid()) {
-            if (lastTime == 0) {
-                resetVelocityTracking();
-            }
-            double currentError = result.getTx();
-            myTx = currentError;
-
-            double pidfPower = calculatePIDF(currentError);
-            turretPower = applySafety(pidfPower);
-
-        } else {
-            // Hold last known direction gently instead of snapping
-            turretPower = Range.clip(lastError * 0.02, -0.15, 0.15);
-        }
-
-
+        myTx = result.getTx();
+        turretPower = applySafety(calculatePIDF(myTx));
         turret.setPower(turretPower);
-    }
-
-    public void stop() {
+    }    public void stop() {
         turret.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         turret.setPower(0);
     }
 
-    private double getTurretPower(double tx, double myOffset, double mySlope) {
-        double myPower = 0.0;
+    private double getTurretPower(double tx) {
+        double power = tx * mySlope;   // sign comes from tx
+        power += Math.copySign(myOffset, tx); // optional bias, but symmetric
 
-        if (tx < 0) {
-            myPower = -.2 * (tx * mySlope + myOffset);
-            if (myPower > 0.7) {
-                myPower = AUTO_MAX_POWER;
-            } else if (myPower < 0.35) {
-                myPower = AUTO_MIN_POWER_FLOOR;
-            }
-            return myPower;
-        } else if (tx > 0) {
-            myPower = -.2 * (tx * mySlope - myOffset);
-            if (myPower < -0.7) {
-                myPower = -1 * AUTO_MAX_POWER;
-            } else if (myPower > -0.35) {
-                myPower = -1 * AUTO_MIN_POWER_FLOOR;
-            }
-            return myPower;
-        } else {
-            return myPower;
+        power *= -0.2; // flip only once if needed
+
+        if (Math.abs(power) < AUTO_MIN_POWER_FLOOR) {
+            power = Math.copySign(AUTO_MIN_POWER_FLOOR, power);
         }
-    }
 
+        return Range.clip(power, -AUTO_MAX_POWER, AUTO_MAX_POWER);
+    }
     public void setHome() {
         turret.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         turret.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -256,12 +211,15 @@ public class Turret {
 
     private double calculatePIDF(double error) {
         turret.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-
-        double lastEncoderPos = turret.getCurrentPosition();
-
-
         long now = System.currentTimeMillis();
+
         double dt = Math.max((now - lastTime)/1000.0, 0.02);
+
+        double currentPos = turret.getCurrentPosition();
+        double rawVel = (currentPos - lastEncoderPos) / dt;
+        filtVel = 0.6 * filtVel + 0.4 * rawVel;
+        lastEncoderPos = currentPos;
+
         if (dt <= 0) dt = 0.04;
 
         // --- Deadband ---
@@ -269,7 +227,6 @@ public class Turret {
             // Hold against static friction instead of stopping
             return kF * Math.signum(error);
         }
-        double rawVel = (turret.getCurrentPosition() - lastEncoderPos) / dt;
         filtVel = 0.6 * filtVel + 0.4 * rawVel;
         lastEncoderPos = turret.getCurrentPosition();
 
@@ -279,15 +236,7 @@ public class Turret {
         integralSum = Range.clip(integralSum, -10, 10);
 
         // --- Velocity-based D ---
-        int currentPos = turret.getCurrentPosition();
-        double velocityDt = (now - lastVelocityTime) / 1000.0;
-        if (velocityDt <= 0) velocityDt = 0.04;
-
-        double angularVelocity = (currentPos - lastEncoderPos) / velocityDt;
-        double derivative = -kD * angularVelocity;
-
-        lastEncoderPos = currentPos;
-        lastVelocityTime = now;
+        double derivative = -kD * filtVel;
 
         // --- Scaled Feedforward ---
         double feedforward =
@@ -297,12 +246,10 @@ public class Turret {
         // --- PIDF sum ---
         double output =
                 (kP * error) +
-                        (kI * integralSum) +
-                        derivative +
                         feedforward;
 
         // --- Slowdown near target ---
-        double slowZone = 1.5;
+        double slowZone = 2;
         if (Math.abs(error) < slowZone) {
             output *= Math.abs(error) / slowZone;
         }
@@ -313,18 +260,16 @@ public class Turret {
         lastTime = now;
 
         // --- Minimum power floor to overcome static friction ---
-        double minPower = 0.12;
+        double minPower = 0.21;
 
         if (Math.abs(output) > 0 && Math.abs(output) < minPower) {
             output = Math.signum(output) * minPower;
         }
 
-
         return output;
     }
 
     public double getTx() {
-        myTx = tx;
         return myTx;
     }
 
