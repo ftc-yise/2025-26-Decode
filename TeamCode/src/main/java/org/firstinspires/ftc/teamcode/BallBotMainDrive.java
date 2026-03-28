@@ -320,7 +320,7 @@ public class BallBotMainDrive extends LinearOpMode {
             }
 
             // Once all shots are done and no buttons are pressed, reset shot count
-            if (!a && !x && !gamepad2.x && !prevX && !prevA && !gamepad2.a && autoShoot.shots >= 3){
+            if (!a && !x && !gamepad2.x && !prevX && !prevA && !gamepad2.a && autoShoot.shots >= 3) {
                 autoShoot.shots = 0;
             }
 
@@ -393,7 +393,7 @@ public class BallBotMainDrive extends LinearOpMode {
             // alliance color.
             // -----------------------------------------------------
             if (gamepad1.y) {
-                turret.limelight.pipelineSwitch(2);
+                turret.limelight.pipelineSwitch(1);
                 turret.runto(430); // keep this per your request
 
                 int tagId = turret.getID();
@@ -408,7 +408,7 @@ public class BallBotMainDrive extends LinearOpMode {
                     turret.limelight.pipelineSwitch(4);
                 } else {
                     alliance = Turret.turretAlliance.BLUE;
-                    turret.limelight.pipelineSwitch(3);
+                    turret.limelight.pipelineSwitch(2);
                 }
             }
 
@@ -428,7 +428,7 @@ public class BallBotMainDrive extends LinearOpMode {
                 led2.setOff();
                 led3.setOff();
                 ledTimer.reset();
-            } else if (shooting){
+            } else if (shooting) {
                 led1.setGreen();
                 led2.setGreen();
                 led3.setGreen();
@@ -472,7 +472,7 @@ public class BallBotMainDrive extends LinearOpMode {
                 // When the shooter is not busy and triggers are released,
                 // allow the spindexer and lifter to return to a safe default.
                 if (!autoShoot.isBusy() && gamepad1.right_trigger < 0.75 && gamepad1.left_trigger < 0.75) {
-                    if (gamepad2.right_stick_button && gamepad2.left_stick_button){
+                    if (gamepad2.right_stick_button && gamepad2.left_stick_button) {
                         Parameters.spinLocation = spin.getTelemetry().currentAngle;
                         spin.initSilos();
                     }
@@ -492,13 +492,11 @@ public class BallBotMainDrive extends LinearOpMode {
 
             // These d-pad controls are for direct operator override
             if (gamepad1.dpad_down) {
-                // foot.setPower(0.557);
+                foot.setPower(0.557);
                 // spin.goToPose(0);
-            }
-            else if (gamepad1.dpad_left) {
+            } else if (gamepad1.dpad_left) {
                 spin.goToPose(0);
-            }
-            else if (gamepad1.dpad_up) {
+            } else if (gamepad1.dpad_up) {
                 foot.setPower(-0.25);
                 // spin.goToPose(0.5);
             } else if (gamepad1.dpad_right) {
@@ -511,8 +509,7 @@ public class BallBotMainDrive extends LinearOpMode {
                 hood.setTarget(60);
                 lifter.setUp();
                 shooting = true;
-            }
-            else if (gamepad2.dpad_down && !autoShoot.isBusy()) {
+            } else if (gamepad2.dpad_down && !autoShoot.isBusy()) {
                 hood.setTarget(80);
                 lifter.setDown();
                 shooting = true;
@@ -572,8 +569,7 @@ public class BallBotMainDrive extends LinearOpMode {
             if (turret.mode == Turret.turretMode.AUTO) {
                 turret.autoMode();
                 turret.mode = Turret.turretMode.AUTO;
-            }
-            else if (currentSnapState == SnapState.HOMING_ROUTINE) {
+            } else if (currentSnapState == SnapState.HOMING_ROUTINE) {
                 // Homing: move toward the limit switch until it is reached
                 if (gamepad2.share) {
                     if (!turret.limit.getState()) {
@@ -590,8 +586,7 @@ public class BallBotMainDrive extends LinearOpMode {
                     currentSnapState = SnapState.INACTIVE;
                     turret.stop();
                 }
-            }
-            else if (currentSnapState == SnapState.GOING_HOME) {
+            } else if (currentSnapState == SnapState.GOING_HOME) {
                 // Drive turret back to a known center encoder position
                 int currentPos = turret.turret.getCurrentPosition();
                 int error = CENTER_TARGET - currentPos;
@@ -604,24 +599,21 @@ public class BallBotMainDrive extends LinearOpMode {
                     turret.stop();
                     currentSnapState = SnapState.INACTIVE;
                 }
-            }
-            else if (currentSnapState == SnapState.SNAPPING_RIGHT) {
+            } else if (currentSnapState == SnapState.SNAPPING_RIGHT) {
                 // Run right until the limit switch is hit
                 turret.manualControl(1.0);
                 if (!turret.limit.getState()) {
                     snapTimer.reset();
                     currentSnapState = SnapState.PUSHING_RIGHT;
                 }
-            }
-            else if (currentSnapState == SnapState.PUSHING_RIGHT) {
+            } else if (currentSnapState == SnapState.PUSHING_RIGHT) {
                 // Briefly keep pushing after the switch is hit
                 if (snapTimer.seconds() < 1.0) turret.manualControl(0.5);
                 else {
                     turret.stop();
                     currentSnapState = SnapState.INACTIVE;
                 }
-            }
-            else if (currentSnapState == SnapState.SNAPPING_LEFT) {
+            } else if (currentSnapState == SnapState.SNAPPING_LEFT) {
                 // Drive left until the left encoder limit is reached
                 int currentPos = turret.turret.getCurrentPosition();
                 turret.manualControl(-1.0);
@@ -629,15 +621,13 @@ public class BallBotMainDrive extends LinearOpMode {
                     snapTimer.reset();
                     currentSnapState = SnapState.PUSHING_LEFT;
                 }
-            }
-            else if (currentSnapState == SnapState.PUSHING_LEFT) {
+            } else if (currentSnapState == SnapState.PUSHING_LEFT) {
                 if (snapTimer.seconds() < 1.0) turret.manualControl(-0.5);
                 else {
                     turret.stop();
                     currentSnapState = SnapState.INACTIVE;
                 }
-            }
-            else if (turret.mode == Turret.turretMode.MANUAL &&
+            } else if (turret.mode == Turret.turretMode.MANUAL &&
                     currentSnapState == SnapState.INACTIVE &&
                     Math.abs(gamepad2.right_trigger - gamepad2.left_trigger) <= 0.05) {
                 turret.stop();
@@ -712,6 +702,7 @@ public class BallBotMainDrive extends LinearOpMode {
             // The spindexer samples sensors first, then runs its logic,
             // then exposes a telemetry snapshot.
             // =========================================================
+
             spin.sampleSensorsNow();
             spin.update();
             Spindexer.TelemetryPacket spina = spin.getTelemetry();
@@ -854,7 +845,7 @@ public class BallBotMainDrive extends LinearOpMode {
             telemetry.addData("Green", backRightB.green());
 
 //lift
-
+            */
             telemetry.addLine("=== LIFT ===");
             telemetry.addData("pose", l.position);
             telemetry.addData("volt", l.voltage);
@@ -862,9 +853,10 @@ public class BallBotMainDrive extends LinearOpMode {
             telemetry.addData("mode", l.mode);
             telemetry.addData("up", lifter.isUp());
             telemetry.addData("down", lifter.isDown());
+            /*
 
 //hood
-            */
+
             telemetry.addLine("=== HOOD ===");
             telemetry.addData("Mode", H.mode);
             telemetry.addData("Voltage", "%.3f", H.voltage);
@@ -872,12 +864,14 @@ public class BallBotMainDrive extends LinearOpMode {
             telemetry.addData("Target", "%.1f°", H.targetAngle);
             telemetry.addData("Error", "%.1f°", H.angleError);
             telemetry.addData("Power", "%.2f", H.appliedPower);
-            /*
+            */
 
 
-             */
+
             telemetry.addData("limiit", limit.getState());
             telemetry.update();
+            /*
+
 
 
 
@@ -1022,7 +1016,11 @@ public class BallBotMainDrive extends LinearOpMode {
             telemetry.addData("File", logFilePath);
             telemetry.update();
         }
+         */
+
+        }
     }
+
 
     /**
      * Checks whether the currently queued shot pattern can be completed

@@ -95,7 +95,7 @@ public class Turret {
         if (currentAlliance == turretAlliance.RED) {
             limelight.pipelineSwitch(4);
         } else if (currentAlliance == turretAlliance.BLUE) {
-            limelight.pipelineSwitch(3);
+            limelight.pipelineSwitch(2);
         }
         mode = turretMode.MANUAL;
         lastTime = System.currentTimeMillis();

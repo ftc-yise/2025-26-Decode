@@ -160,7 +160,7 @@ public class ShooterExecutionClass {
 
         // Keep default lifter configuration and calibration
         lifter.setPresetPositions(0.0, 1.0);
-        lifter.setCalibration(0.457, 0, 1.42, 1);
+        lifter.setCalibration(0.452, 0, 1.28, 1);
 
         // Initialize plan array to "empty"
         for (int i = 0; i < firingPlan.length; i++) firingPlan[i] = -1;
@@ -341,8 +341,8 @@ public class ShooterExecutionClass {
             case MOVE_TO_SILO:
                 // Wait until the spindexer is aligned enough to proceed
                 double angleErr = Math.abs(spindexer.getTelemetry().angleError);
-                if (timer.seconds() > 1.25) {
-                    if (angleErr < 1.5) {
+                if (timer.seconds() > 0.2) {
+                    if (angleErr < 4) {
                         lastMoveToSiloSec = timer.seconds();
                         spindexer.sampleSensorsNow();
                         state = State.SPIN_WAIT;
@@ -379,7 +379,7 @@ public class ShooterExecutionClass {
             case FIRE_LIFT_UP:
                 // Raise the lifter to push the ball into the shooter
                 if (lifter.isUp() || timer.seconds() > LIFTER_MOVE_TIMEOUT) {
-                    if (timer.seconds() > .25) {
+                    if (timer.seconds() > .2) {
                         lastFireLiftUpSec = timer.seconds();
                         lifter.setDown();
                         timer.reset();

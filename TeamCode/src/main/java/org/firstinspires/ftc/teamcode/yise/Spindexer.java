@@ -91,7 +91,7 @@ public class Spindexer {
     // Hardcoded target angles for the three named silos
     private static final double SILO_1_TARGET_DEG = 303.5;
     private static final double SILO_2_TARGET_DEG = 183.5;
-    private static final double SILO_3_TARGET_DEG = 60.5;
+    private static final double SILO_3_TARGET_DEG = 64.5;
 
     // Keep existing angle-based silo definitions for compatibility
     // These are still used by color matching and initSilos().
