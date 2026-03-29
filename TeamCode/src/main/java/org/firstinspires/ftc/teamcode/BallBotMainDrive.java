@@ -331,12 +331,12 @@ public class BallBotMainDrive extends LinearOpMode {
                 // On the rising edge, attempt a pattern-aware cycle
                 if (canSatisfyPattern(patternMgr, spin) && !autoShoot.isBusy()) {
                     shooter.update(false, false, true);
-                    hood.setTarget(60);
+                    hood.setTarget(50);
                     autoShoot.startCycle();
                 } else {
                     // If the current pattern cannot be satisfied, begin forced shooting
                     shooter.update(false, false, true);
-                    hood.setTarget(60);
+                    hood.setTarget(50);
                     if (!autoShoot.forceShooting && !autoShoot.isBusy()) {
                         autoShoot.startForcedCycle();
                     }
@@ -344,7 +344,7 @@ public class BallBotMainDrive extends LinearOpMode {
             } else if (a) {
                 // While held, keep forced shooting alive
                 shooter.update(false, false, true);
-                hood.setTarget(60);
+                hood.setTarget(50);
                 if (!autoShoot.forceShooting && !autoShoot.isBusy()) {
                     autoShoot.startForcedCycle();
                 }
@@ -356,11 +356,11 @@ public class BallBotMainDrive extends LinearOpMode {
             if (x && !prevX) {
                 if (canSatisfyPattern(patternMgr, spin) && !autoShoot.isBusy()) {
                     shooter.update(false, true, false);
-                    hood.setTarget(80);
+                    hood.setTarget(35);
                     autoShoot.startCycle();
                 } else {
                     shooter.update(false, true, false);
-                    hood.setTarget(80);
+                    hood.setTarget(35);
                     if (!autoShoot.forceShooting && !autoShoot.isBusy()) {
                         autoShoot.startForcedCycle();
                     }
@@ -443,7 +443,7 @@ public class BallBotMainDrive extends LinearOpMode {
             //
             // The wall wheels are driven to help manage ball flow.
             // -----------------------------------------------------
-            if (gamepad1.right_trigger > 0.75 && !shooting) {
+            if ((gamepad1.right_trigger > 0.75 || gamepad2.right_bumper)  && !shooting) {
                 intake.setPower(1);
                 led1.setRed();
                 led2.setRed();
@@ -458,7 +458,7 @@ public class BallBotMainDrive extends LinearOpMode {
                 walleft.setPower(-1);
                 wallright.setPower(-1);
                 once = true;
-            } else if (gamepad1.right_bumper && !shooting) {
+            } else if ((gamepad1.right_bumper  || gamepad2.left_bumper) && !shooting) {
                 intake.setPower(-.6);
                 walleft.setPower(-1);
                 wallright.setPower(-1);
@@ -544,24 +544,12 @@ public class BallBotMainDrive extends LinearOpMode {
 
             // 3. Manual control only applies when turret is in MANUAL mode
             if (turret.mode == Turret.turretMode.MANUAL) {
-                double turretManualTrigger = (gamepad2.left_trigger - gamepad2.right_trigger) * -.8;
+                double turretManualTrigger = (gamepad2.left_trigger - gamepad2.right_trigger) * -.6;
 
                 // Direct trigger-based turret motion
                 if (Math.abs(turretManualTrigger) > 0.05) {
                     currentSnapState = SnapState.INACTIVE;
                     turret.manualControl(turretManualTrigger);
-                }
-                // Both bumpers pressed = return turret to center
-                else if (gamepad2.left_bumper && gamepad2.right_bumper) {
-                    currentSnapState = SnapState.GOING_HOME;
-                }
-                // Right bumper = snap right
-                else if (gamepad2.right_bumper && currentSnapState != SnapState.SNAPPING_RIGHT && currentSnapState != SnapState.PUSHING_RIGHT) {
-                    currentSnapState = SnapState.SNAPPING_RIGHT;
-                }
-                // Left bumper = snap left
-                else if (gamepad2.left_bumper && currentSnapState != SnapState.SNAPPING_LEFT && currentSnapState != SnapState.PUSHING_LEFT) {
-                    currentSnapState = SnapState.SNAPPING_LEFT;
                 }
             }
 

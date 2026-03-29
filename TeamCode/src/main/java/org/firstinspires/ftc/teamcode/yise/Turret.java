@@ -16,7 +16,7 @@ import java.util.List;
 
 @Configurable
 public class Turret {
-    double mySlope = 0.25;
+    double mySlope = 0.26;
     double myOffset = 0.35;
     double tx = 0.0;
     public int homePos = 295;       // Right side home
@@ -30,11 +30,11 @@ public class Turret {
     public static double kP = 0.022;
     public static double kI = 0;
     public static double kD = 0;
-    public static double kF = 0.13;   // static friction feedforward
+    public static double kF = 0.04;   // static friction feedforward
 
-    public static double AUTO_MAX_POWER = 0.65;
-    public static double TARGET_TOLERANCE_DEG = 1;
-    public static double AUTO_MIN_POWER_FLOOR = 0.11;
+    public static double AUTO_MAX_POWER = 0.45;
+    public static double TARGET_TOLERANCE_DEG = 2;
+    public static double AUTO_MIN_POWER_FLOOR = 0.08;
 
     // --- ANALOG MANUAL CONTROL CONSTANTS  ---
     public static double MAX_MANUAL_POWER = 1.0;
@@ -249,7 +249,7 @@ public class Turret {
                         feedforward;
 
         // --- Slowdown near target ---
-        double slowZone = 2;
+        double slowZone = 2.5;
         if (Math.abs(error) < slowZone) {
             output *= Math.abs(error) / slowZone;
         }
