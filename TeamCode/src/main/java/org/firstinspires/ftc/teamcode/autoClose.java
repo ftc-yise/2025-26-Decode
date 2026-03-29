@@ -54,34 +54,28 @@ public class autoClose extends LinearOpMode {
         // tab one is for red
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
                 .strafeTo(new Vector2d(-50,37))
-                .waitSeconds(2)
                 .strafeToLinearHeading(new Vector2d(-33,25), Math.toRadians(180))
                 //.setTangent(Math.toRadians(0))
-                .waitSeconds(6)
-                //the long wait is for shooting 3 balls
+                //shoot 3 balls
                 .strafeToLinearHeading(new Vector2d(-10,22), Math.toRadians(90))
-                .waitSeconds(2)
+                //turn in intake
                 .strafeTo(new Vector2d(-10,49))
-                .waitSeconds(2)
+                //turn off intake
                 .strafeTo(new Vector2d(-10,22))
-                .waitSeconds(6)
-                //the long wait is for shooting 3 balls
+                //shoot 3 balls
                 .strafeTo(new Vector2d(-58,14));
                 //park
         TrajectoryActionBuilder tab2 = drive.actionBuilder(initialPose)
                 .strafeTo(new Vector2d(-50,-37))
-                .waitSeconds(2)
                 .strafeToLinearHeading(new Vector2d(-33,-25), Math.toRadians(180))
                 //.setTangent(Math.toRadians(0))
-                .waitSeconds(6)
-                //the long wait is for shooting 3 balls
+                //shoot 3 balls
                 .strafeToLinearHeading(new Vector2d(-10,-22), Math.toRadians(270))
-                .waitSeconds(2)
+                //turn on intake
                 .strafeTo(new Vector2d(-10,-49))
-                .waitSeconds(2)
+                //turn of intake
                 .strafeTo(new Vector2d(-10,-22))
-                .waitSeconds(6)
-                //the long wait is for shooting 3 balls
+                //shoot 3 balls
                 .strafeTo(new Vector2d(-58,-14));
                 //park
 
@@ -99,4 +93,6 @@ public class autoClose extends LinearOpMode {
         Actions.runBlocking(trajectoryActionChosen);
         intake.setPower(0);
     }
+
+
 }
