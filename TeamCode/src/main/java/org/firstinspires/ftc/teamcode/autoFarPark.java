@@ -53,16 +53,12 @@ public class autoFarPark extends LinearOpMode {
         // we build our trajectories during initialization to avoid wasting time during auto
         // tab one is for red
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
-                .waitSeconds(6)
-                //the long wait is for shooting 3 balls
-                .strafeTo(new Vector2d(-63, -14))
-                .waitSeconds(3);
+                //shoot 3 balls
+                .strafeTo(new Vector2d(-63, -14));
         // tab two is for blue
         TrajectoryActionBuilder tab2 = drive.actionBuilder(initialPose)
-                .waitSeconds(6)
-                //the long wait is for shooting 3 balls
-                .strafeTo(new Vector2d(-63, 14))
-                .waitSeconds(3);
+                //shoot 3 balls
+                .strafeTo(new Vector2d(-63, 14));
 
         waitForStart();
         if (isStopRequested()) return;
@@ -74,8 +70,6 @@ public class autoFarPark extends LinearOpMode {
             trajectoryActionChosen = tab2.build();
         }
 
-        intake.setPower(1);
         Actions.runBlocking(trajectoryActionChosen);
-        intake.setPower(0);
     }
 }
