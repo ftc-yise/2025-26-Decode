@@ -16,8 +16,6 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 public class autoExample extends LinearOpMode {
     public DcMotor intake;
     public Pose2d initialPose;
-    public Action traj_1;
-    public Action traj_2;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -26,19 +24,23 @@ public class autoExample extends LinearOpMode {
         intake = hardwareMap.get(DcMotor.class, "intake");
 
         initialPose = new Pose2d(0, 0, Math.toRadians(0));
-        TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
-                .strafeTo(new Vector2d(18,18))
-                .turn(Math.toRadians(180));
+        //TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
+        //        .strafeTo(new Vector2d(18,18))
+        //        .turn(Math.toRadians(180));
 
-        traj_2 = tab1.endTrajectory().fresh()
-                .strafeTo(new Vector2d(0,0))
+        TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
+                .strafeTo(new Vector2d(18,18));
+
+        TrajectoryActionBuilder tab2 = tab1.endTrajectory().fresh()
                 .turn(Math.toRadians(180))
-                .build();
+                .strafeTo(new Vector2d(0,0))
+                .turn(Math.toRadians(180));
 
         waitForStart();
         if (isStopRequested()) return;
 
-        traj_1 = tab1.build();
+        Action traj_1 = tab1.build();
+        Action traj_2 = tab2.build();
 
         intake.setPower(1);
         Actions.runBlocking(traj_1);
