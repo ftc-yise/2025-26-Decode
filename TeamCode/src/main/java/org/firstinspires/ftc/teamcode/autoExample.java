@@ -24,9 +24,6 @@ public class autoExample extends LinearOpMode {
         intake = hardwareMap.get(DcMotor.class, "intake");
 
         initialPose = new Pose2d(0, 0, Math.toRadians(0));
-        //TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
-        //        .strafeTo(new Vector2d(18,18))
-        //        .turn(Math.toRadians(180));
 
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
                 .strafeTo(new Vector2d(18,18));
