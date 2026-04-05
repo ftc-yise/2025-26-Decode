@@ -36,7 +36,7 @@ public class autoClose extends LinearOpMode {
                 .strafeTo(new Vector2d(-36,33));
 
         TrajectoryActionBuilder tab4 =tab3.endTrajectory().fresh()
-                .strafeTo(new Vector2d(-40,33));
+                .strafeTo(new Vector2d(-16,36));
         waitForStart();
         if (isStopRequested()) return;
 
