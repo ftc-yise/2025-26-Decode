@@ -10,6 +10,9 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
+import org.firstinspires.ftc.teamcode.yise.Parameters;
+import org.firstinspires.ftc.teamcode.yise.Turret;
+
 import java.util.Objects;
 
 @Config
@@ -25,7 +28,14 @@ public class autoClose extends LinearOpMode {
 
     @Override
     public void runOpMode() throws InterruptedException {
+        if (Parameters.allianceColor == Parameters.Color.RED) {
+            String alliance = "RED";
+        } else if (Parameters.allianceColor == Parameters.Color.BLUE) {
+            String alliance = "BLUE";
+        }
+
         Pose2d initialPose = null;
+
         if (Objects.equals(alliance, "RED")) {
             initialPose = new Pose2d(-64, 43, Math.toRadians(270));
         }else if (Objects.equals(alliance, "BLUE")) {
