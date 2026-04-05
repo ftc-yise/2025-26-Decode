@@ -1,102 +1,60 @@
 package org.firstinspires.ftc.teamcode;
 
-import androidx.annotation.NonNull;
-
 import com.acmerobotics.dashboard.config.Config;
-import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
-
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
-import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
-
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
-
-import org.firstinspires.ftc.teamcode.yise.Parameters;
-
-import java.util.Objects;
-
 
 @Config
 @Autonomous(name = "autoClose", group = "Linear Opmode")
 
 public class autoClose extends LinearOpMode {
-    // default alliance is red
-    public String alliance = "RED";
-    // this will hold the trajectoryAction we select based on alliance color
-    public Action trajectoryActionChosen;
     public DcMotor intake;
-
+    public Pose2d initialPose;
 
     @Override
     public void runOpMode() throws InterruptedException {
+        initialPose = new Pose2d(-64, 43, Math.toRadians(90));
 
-        // default alliance is red, only overwrite if blue was chosen in game values
-        if (Parameters.allianceColor == Parameters.Color.BLUE) {
-            alliance = "BLUE";
-        }
-
-        // instantiate drive class (MecanumDrive) at a particular pose.
-        Pose2d initialPose = null;
-        if (Objects.equals(alliance, "RED")) {
-            initialPose = new Pose2d(-60, 40, Math.toRadians(0));
-        }else if (Objects.equals(alliance, "BLUE")) {
-            initialPose = new Pose2d(-60, -40, Math.toRadians(0));
-        }
         MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
-        //Intake intake = new Intake(hardwareMap);
-        intake = hardwareMap.get(DcMotor.class, "intake");
+        drive.localizer.setPose(initialPose);
 
-        // we build our trajectories during initialization to avoid wasting time during auto
-        // tab one is for red
+        //all positions are for red side only
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
-                .strafeTo(new Vector2d(-50,37))
-                .waitSeconds(2)
-                .strafeToLinearHeading(new Vector2d(-33,25), Math.toRadians(180))
-                //.setTangent(Math.toRadians(0))
-                .waitSeconds(6)
-                //the long wait is for shooting 3 balls
-                .strafeToLinearHeading(new Vector2d(-10,22), Math.toRadians(90))
-                .waitSeconds(2)
-                .strafeTo(new Vector2d(-10,49))
-                .waitSeconds(2)
-                .strafeTo(new Vector2d(-10,22))
-                .waitSeconds(6)
-                //the long wait is for shooting 3 balls
-                .strafeTo(new Vector2d(-58,14));
-                //park
-        TrajectoryActionBuilder tab2 = drive.actionBuilder(initialPose)
-                .strafeTo(new Vector2d(-50,-37))
-                .waitSeconds(2)
-                .strafeToLinearHeading(new Vector2d(-33,-25), Math.toRadians(180))
-                //.setTangent(Math.toRadians(0))
-                .waitSeconds(6)
-                //the long wait is for shooting 3 balls
-                .strafeToLinearHeading(new Vector2d(-10,-22), Math.toRadians(270))
-                .waitSeconds(2)
-                .strafeTo(new Vector2d(-10,-49))
-                .waitSeconds(2)
-                .strafeTo(new Vector2d(-10,-22))
-                .waitSeconds(6)
-                //the long wait is for shooting 3 balls
-                .strafeTo(new Vector2d(-58,-14));
-                //park
+                .strafeTo(new Vector2d(-36,33));
 
+        TrajectoryActionBuilder tab2 = tab1.endTrajectory().fresh()
+                .strafeTo(new Vector2d(-17,35));
+
+        TrajectoryActionBuilder tab3 =tab2.endTrajectory().fresh()
+                .strafeTo(new Vector2d(-17,50))
+                .strafeTo(new Vector2d(-36,33));
+
+        TrajectoryActionBuilder tab4 =tab3.endTrajectory().fresh()
+                .strafeTo(new Vector2d(-40,33));
         waitForStart();
         if (isStopRequested()) return;
 
-        // set our trajectoryAction based on alliance color
-        if (Objects.equals(alliance, "RED")) {
-            trajectoryActionChosen = tab1.build();
-        } else if (Objects.equals(alliance, "BLUE")) {
-            trajectoryActionChosen = tab2.build();
-        }
+        Action traj_1 = tab1.build();
+        Action traj_2 = tab2.build();
+        Action traj_3 = tab3.build();
+        Action traj_4 = tab4.build();
 
-        intake.setPower(1);
-        Actions.runBlocking(trajectoryActionChosen);
-        intake.setPower(0);
+        Actions.runBlocking(traj_1); //drive to shooting spot
+        //shoot initial 3 balls
+        Actions.runBlocking(traj_2); //drive to closest spike mark
+        //intake.setPower(1);
+        Actions.runBlocking(traj_3);//drive to end of spike mark then shooting spot
+        //intake.setPower(0);
+        //shoot 3 balls
+        Actions.runBlocking(traj_4);//drive to park
+
     }
+
+
 }
