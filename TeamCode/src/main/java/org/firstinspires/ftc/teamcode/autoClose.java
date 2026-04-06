@@ -61,6 +61,7 @@ public class autoClose extends LinearOpMode {
         TrajectoryActionBuilder tab4 =tab3.endTrajectory().fresh()
                 .strafeTo(new Vector2d(-16,36));
 
+        //blue side now
         TrajectoryActionBuilder tab5 = drive.actionBuilder(initialPose)
                 .strafeTo(new Vector2d(-36,-33))
                 .turn(Math.toRadians(180));
@@ -68,7 +69,12 @@ public class autoClose extends LinearOpMode {
         TrajectoryActionBuilder tab6 =tab5.endTrajectory().fresh()
                 .strafeTo(new Vector2d(-17,-35));
 
+        TrajectoryActionBuilder tab7= tab6.endTrajectory().fresh()
+                .strafeTo(new Vector2d(-17,-50))
+                .strafeTo(new Vector2d(-36,-33));
 
+        TrajectoryActionBuilder tab8= tab7.endTrajectory().fresh()
+                .strafeTo(new Vector2d(-16,-36));
 
         waitForStart();
         if (isStopRequested()) return;
@@ -82,6 +88,8 @@ public class autoClose extends LinearOpMode {
         } else if (Objects.equals(alliance, "BLUE")) {
             trajectoryActionChosen = tab5.build();
             trajectoryActionChosen = tab6.build();
+            trajectoryActionChosen = tab7.build();
+            trajectoryActionChosen = tab8.build();
         }
 
         Action traj_1 = tab1.build();
@@ -90,6 +98,8 @@ public class autoClose extends LinearOpMode {
         Action traj_4 = tab4.build();
         Action traj_5 = tab5.build();
         Action traj_6 = tab6.build();
+        Action traj_7 = tab7.build();
+        Action traj_8 = tab8.build();
 
         //red side
         Actions.runBlocking(traj_1);//drive to shooting spot
@@ -103,6 +113,13 @@ public class autoClose extends LinearOpMode {
 
         //blue side
         Actions.runBlocking(traj_5);//drive to shooting spot
+        //shoot initial 3 balls
+        Actions.runBlocking(traj_6);//drive to closest spike mark
+        //intake.setPower(1);
+        Actions.runBlocking(traj_7);//drive to end of spike mark then shooting spot
+        //intake.setPower(0);
+        //shoot 3 balls
+        Actions.runBlocking(traj_8);//drive to park
 
     }
 }
