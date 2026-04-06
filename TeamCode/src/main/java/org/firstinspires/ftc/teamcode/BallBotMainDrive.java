@@ -466,8 +466,10 @@ public class  BallBotMainDrive extends LinearOpMode {
             } else {
                 // Idle intake state
                 intake.setPower(0);
-                walleft.setPower(0.25);
-                wallright.setPower(0.25);
+                if (autoShoot.dpad == false) {
+                    walleft.setPower(0.25);
+                    wallright.setPower(0.25);
+                }
 
                 // When the shooter is not busy and triggers are released,
                 // allow the spindexer and lifter to return to a safe default.
@@ -492,7 +494,11 @@ public class  BallBotMainDrive extends LinearOpMode {
 
             // These d-pad controls are for direct operator override
             if (gamepad1.dpad_down) {
-                foot.setPower(0.557);
+                foot.setPower(0.6667);
+                autoShoot.dpad = true;
+                wallright.setPower(0);
+                walleft.setPower(0);
+                shooter.update(true,false,false);
                 // spin.goToPose(0);
             } else if (gamepad1.dpad_left) {
                 spin.goToPose(0);
