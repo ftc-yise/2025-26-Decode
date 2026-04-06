@@ -53,39 +53,7 @@ public class autoClose extends LinearOpMode {
         Hood hood = new Hood(hardwareMap);
         lifter lifter = new lifter(hardwareMap);
         ShooterExecutionClass autoShoot = new ShooterExecutionClass(spin, shooter, hardwareMap, lifter);
-        Turret turret = new Turret(hardwareMap, alliance2, telemetry);
-
-        waitForStart();
-        runtime.reset();
-        turret.limelight.pipelineSwitch(2);
-
-
-        while (!opModeIsActive()) {
-            turret.mode = Turret.turretMode.AUTO;
-            int tagId = turret.getID();
-            ShotPatternManager.ShotPattern p = patternFromTag(tagId);
-            if (p != null) {
-                patternMgr.clear();
-                patternMgr.addPattern(p.sequence);
-            }
-            spin.sampleSensorsNow();
-            spin.update();
-            telemetry.addLine("=== SILOS ===");
-            Spindexer.BallColor[] silos = spin.siloColors;
-            for (int i = 0; i < silos.length; i++) {
-                String label = "Silo " + (i+1);
-                // Highlight the current silo
-                telemetry.addData(label, silos[i]);
-            }
-
-            telemetry.addLine("=== TURRET ===");
-            telemetry.addData("Mode", turret.mode);
-            telemetry.addData("Power", turret.turretPower);
-            telemetry.addData("pose", turret.getPose());
-            telemetry.addData("id", turret.getID());
-            telemetry.addData("pipeline", turret.limelight.getStatus().getPipelineIndex());
-            telemetry.update();
-        }
+        intake = hardwareMap.get(DcMotor.class, "intake");
 
         if (Parameters.allianceColor == Parameters.Color.RED) {
             alliance = "RED";
@@ -94,6 +62,11 @@ public class autoClose extends LinearOpMode {
             alliance = "BLUE";
             alliance2 = Turret.turretAlliance.BLUE;
         }
+        Turret turret = new Turret(hardwareMap, alliance2, telemetry);
+        turret.limelight.pipelineSwitch(2);
+
+
+        runtime.reset();
 
 
         Pose2d initialPose = null;
@@ -137,7 +110,33 @@ public class autoClose extends LinearOpMode {
         TrajectoryActionBuilder tab8= tab7.endTrajectory().fresh()
                 .strafeTo(new Vector2d(-16,-36));
 
-        waitForStart();
+        while (!isStarted() && !isStopRequested()) {
+            turret.mode = Turret.turretMode.AUTO;
+            int tagId = turret.getID();
+            ShotPatternManager.ShotPattern p = patternFromTag(tagId);
+            if (p != null) {
+                patternMgr.clear();
+                patternMgr.addPattern(p.sequence);
+            }
+            spin.sampleSensorsNow();
+            spin.update();
+            telemetry.addLine("=== SILOS ===");
+            Spindexer.BallColor[] silos = spin.siloColors;
+            for (int i = 0; i < silos.length; i++) {
+                String label = "Silo " + (i+1);
+                // Highlight the current silo
+                telemetry.addData(label, silos[i]);
+            }
+
+            telemetry.addLine("=== TURRET ===");
+            telemetry.addData("Mode", turret.mode);
+            telemetry.addData("Power", turret.turretPower);
+            telemetry.addData("pose", turret.getPose());
+            telemetry.addData("id", turret.getID());
+            telemetry.addData("pipeline", turret.limelight.getStatus().getPipelineIndex());
+            telemetry.update();
+        }
+
         if (isStopRequested()) return;
 
         // set our trajectoryAction based on alliance color
@@ -146,11 +145,13 @@ public class autoClose extends LinearOpMode {
             trajectoryActionChosen = tab2.build();
             trajectoryActionChosen = tab3.build();
             trajectoryActionChosen = tab4.build();
+            turret.limelight.pipelineSwitch(4);
         } else if (Objects.equals(alliance, "BLUE")) {
             trajectoryActionChosen = tab5.build();
             trajectoryActionChosen = tab6.build();
             trajectoryActionChosen = tab7.build();
             trajectoryActionChosen = tab8.build();
+            turret.limelight.pipelineSwitch(3);
         }
 
         Action traj_1 = tab1.build();
