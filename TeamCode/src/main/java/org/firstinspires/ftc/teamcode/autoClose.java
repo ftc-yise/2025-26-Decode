@@ -63,7 +63,7 @@ public class autoClose extends LinearOpMode {
             alliance2 = Turret.turretAlliance.BLUE;
         }
         Turret turret = new Turret(hardwareMap, alliance2, telemetry);
-        turret.limelight.pipelineSwitch(2);
+        turret.limelight.pipelineSwitch(1);
 
 
         runtime.reset();
@@ -151,7 +151,7 @@ public class autoClose extends LinearOpMode {
             trajectoryActionChosen = tab6.build();
             trajectoryActionChosen = tab7.build();
             trajectoryActionChosen = tab8.build();
-            turret.limelight.pipelineSwitch(3);
+            turret.limelight.pipelineSwitch(2);
         }
 
         Action traj_1 = tab1.build();
