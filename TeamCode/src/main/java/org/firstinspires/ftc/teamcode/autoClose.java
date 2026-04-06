@@ -28,10 +28,11 @@ public class autoClose extends LinearOpMode {
 
     @Override
     public void runOpMode() throws InterruptedException {
+
         if (Parameters.allianceColor == Parameters.Color.RED) {
-            String alliance = "RED";
+            alliance = "RED";
         } else if (Parameters.allianceColor == Parameters.Color.BLUE) {
-            String alliance = "BLUE";
+            alliance = "BLUE";
         }
 
         Pose2d initialPose = null;
@@ -61,7 +62,13 @@ public class autoClose extends LinearOpMode {
                 .strafeTo(new Vector2d(-16,36));
 
         TrajectoryActionBuilder tab5 = drive.actionBuilder(initialPose)
-                .strafeTo(new Vector2d(-36,-33));
+                .strafeTo(new Vector2d(-36,-33))
+                .turn(Math.toRadians(180));
+
+        TrajectoryActionBuilder tab6 =tab5.endTrajectory().fresh()
+                .strafeTo(new Vector2d(-17,-35));
+
+
 
         waitForStart();
         if (isStopRequested()) return;
@@ -74,6 +81,7 @@ public class autoClose extends LinearOpMode {
             trajectoryActionChosen = tab4.build();
         } else if (Objects.equals(alliance, "BLUE")) {
             trajectoryActionChosen = tab5.build();
+            trajectoryActionChosen = tab6.build();
         }
 
         Action traj_1 = tab1.build();
@@ -81,6 +89,7 @@ public class autoClose extends LinearOpMode {
         Action traj_3 = tab3.build();
         Action traj_4 = tab4.build();
         Action traj_5 = tab5.build();
+        Action traj_6 = tab6.build();
 
         //red side
         Actions.runBlocking(traj_1);//drive to shooting spot
