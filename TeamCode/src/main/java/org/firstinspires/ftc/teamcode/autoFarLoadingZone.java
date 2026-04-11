@@ -16,9 +16,9 @@ import org.firstinspires.ftc.teamcode.yise.Parameters;
 import java.util.Objects;
 
 @Config
-@Autonomous(name = "autoFarPark", group = "Linear Opmode")
+@Autonomous(name = "autoFarLoadingZone", group = "Linear Opmode")
 
-public class autoFarPark extends LinearOpMode {
+public class autoFarLoadingZone extends LinearOpMode {
     // default alliance is red
     public Turret.turretAlliance alliance = Turret.turretAlliance.RED;
     // this will hold the trajectoryAction we select based on alliance color
@@ -26,6 +26,7 @@ public class autoFarPark extends LinearOpMode {
     public DcMotor intake;
     public Pose2d initialPose;
     public Action traj_1 = null;
+    public Action traj_2 = null;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -49,10 +50,17 @@ public class autoFarPark extends LinearOpMode {
 
         //red side
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
+                .strafeTo(new Vector2d(62,58))
+                .strafeTo(new Vector2d(62,19));
+
+        TrajectoryActionBuilder tab2 = tab1.endTrajectory().fresh()
                 .strafeTo(new Vector2d(62,38));
 
         //blue side now
-        TrajectoryActionBuilder tab2 = drive.actionBuilder(initialPose)
+        TrajectoryActionBuilder tab3 =drive.actionBuilder(initialPose)
+                .strafeTo(new Vector2d(62,-58))
+                .strafeTo(new Vector2d(62,-19));
+        TrajectoryActionBuilder tab4 = tab3.endTrajectory().fresh()
                 .strafeTo(new Vector2d(62,-38));
 
         waitForStart();
@@ -61,12 +69,18 @@ public class autoFarPark extends LinearOpMode {
         // set our trajectoryAction based on alliance color
         if (alliance == Turret.turretAlliance.RED) {
             traj_1 = tab1.build();
+            traj_2 = tab2.build();
         } else if (alliance == Turret.turretAlliance.BLUE) {
-            traj_1 = tab2.build();
+            traj_1 = tab3.build();
+            traj_2 = tab4.build();
         }
 
         //shoot 3 balls
-        Actions.runBlocking(traj_1);//park
+        //intake on
+        Actions.runBlocking(traj_1);//drive to loading zone and back
+        //intake off
+        //shoot 3 balls
+        Actions.runBlocking(traj_2);//park
 
     }
 }
