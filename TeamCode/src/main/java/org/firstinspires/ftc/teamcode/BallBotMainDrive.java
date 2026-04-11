@@ -331,12 +331,12 @@ public class  BallBotMainDrive extends LinearOpMode {
                 // On the rising edge, attempt a pattern-aware cycle
                 if (canSatisfyPattern(patternMgr, spin) && !autoShoot.isBusy()) {
                     shooter.update(false, false, true);
-                    hood.setTarget(50);
+                    hood.setTarget(60);
                     autoShoot.startCycle();
                 } else {
                     // If the current pattern cannot be satisfied, begin forced shooting
                     shooter.update(false, false, true);
-                    hood.setTarget(50);
+                    hood.setTarget(60);
                     if (!autoShoot.forceShooting && !autoShoot.isBusy()) {
                         autoShoot.startForcedCycle();
                     }
@@ -344,7 +344,7 @@ public class  BallBotMainDrive extends LinearOpMode {
             } else if (a) {
                 // While held, keep forced shooting alive
                 shooter.update(false, false, true);
-                hood.setTarget(50);
+                hood.setTarget(60);
                 if (!autoShoot.forceShooting && !autoShoot.isBusy()) {
                     autoShoot.startForcedCycle();
                 }
@@ -356,18 +356,18 @@ public class  BallBotMainDrive extends LinearOpMode {
             if (x && !prevX) {
                 if (canSatisfyPattern(patternMgr, spin) && !autoShoot.isBusy()) {
                     shooter.update(false, true, false);
-                    hood.setTarget(35);
+                    hood.setTarget(25);
                     autoShoot.startCycle();
                 } else {
                     shooter.update(false, true, false);
-                    hood.setTarget(35);
+                    hood.setTarget(25);
                     if (!autoShoot.forceShooting && !autoShoot.isBusy()) {
                         autoShoot.startForcedCycle();
                     }
                 }
             } else if (x) {
                 shooter.update(false, true, false);
-                hood.setTarget(80);
+                hood.setTarget(25);
                 if (!autoShoot.forceShooting && !autoShoot.isBusy()) {
                     autoShoot.startForcedCycle();
                 }
@@ -466,8 +466,10 @@ public class  BallBotMainDrive extends LinearOpMode {
             } else {
                 // Idle intake state
                 intake.setPower(0);
-                walleft.setPower(0.25);
-                wallright.setPower(0.25);
+                if (autoShoot.dpad == false) {
+                    walleft.setPower(0.25);
+                    wallright.setPower(0.25);
+                }
 
                 // When the shooter is not busy and triggers are released,
                 // allow the spindexer and lifter to return to a safe default.
@@ -492,7 +494,11 @@ public class  BallBotMainDrive extends LinearOpMode {
 
             // These d-pad controls are for direct operator override
             if (gamepad1.dpad_down) {
-                foot.setPower(0.557);
+                foot.setPower(0.6667);
+                autoShoot.dpad = true;
+                wallright.setPower(0);
+                walleft.setPower(0);
+                shooter.update(true,false,false);
                 // spin.goToPose(0);
             } else if (gamepad1.dpad_left) {
                 spin.goToPose(0);
@@ -625,7 +631,7 @@ public class  BallBotMainDrive extends LinearOpMode {
             // CSV LOG FILE INITIALIZATION
             // Creates a timestamped CSV in /sdcard/FIRST and writes header row once.
             // =========================================================
-            if (logWriter == null) {
+            /*if (logWriter == null) {
                 try {
                     File dir = new File("/sdcard/FIRST");
                     if (!dir.exists()) dir.mkdirs();
@@ -679,7 +685,7 @@ public class  BallBotMainDrive extends LinearOpMode {
                     telemetry.update();
                 }
             }
-
+            */
             // Clear shot pattern manually with gamepad1 A
             if (gamepad1.a) {
                 patternMgr.clear();
@@ -783,7 +789,7 @@ public class  BallBotMainDrive extends LinearOpMode {
             telemetry.addData("shots", autoShoot.shots);
 
 // TURRET
-            */
+
             telemetry.addLine("=== TURRET ===");
             telemetry.addData("Mode", turret.mode);
             telemetry.addData("Power", turret.turretPower);
@@ -791,7 +797,7 @@ public class  BallBotMainDrive extends LinearOpMode {
             telemetry.addData("id", turret.getID());
             telemetry.addData("tx", turret.getTx());
             telemetry.addData("pipeline", turret.limelight.getStatus().getPipelineIndex());
-            /*
+
 
 // SILOS
             telemetry.addLine("=== SILOS ===");
