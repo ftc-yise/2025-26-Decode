@@ -39,9 +39,9 @@ public class autoClosePark extends LinearOpMode {
         Pose2d initialPose = null;
 
         if (Objects.equals(alliance, Turret.turretAlliance.RED)) {
-            initialPose = new Pose2d(65, 43, Math.toRadians(90));
+            initialPose = new Pose2d(-65, 43, Math.toRadians(270));
         }else if (Objects.equals(alliance, Turret.turretAlliance.BLUE)) {
-            initialPose = new Pose2d(65, -43, Math.toRadians(270));
+            initialPose = new Pose2d(-65, -43, Math.toRadians(180));
         }
 
         MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
@@ -49,11 +49,11 @@ public class autoClosePark extends LinearOpMode {
 
         //red side
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
-                .strafeTo(new Vector2d(57,38));
+                .strafeTo(new Vector2d(-57,38));
 
         //blue side now
         TrajectoryActionBuilder tab2 = drive.actionBuilder(initialPose)
-                .strafeTo(new Vector2d(57,-38));
+                .strafeTo(new Vector2d(-57,-38));
 
         waitForStart();
         if (isStopRequested()) return;
