@@ -11,6 +11,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.teamcode.yise.Turret;
 import org.firstinspires.ftc.teamcode.yise.Parameters;
 import java.util.Objects;
 
@@ -24,22 +25,27 @@ public class autoFar extends LinearOpMode {
     public Action trajectoryActionChosen;
     public DcMotor intake;
     public Pose2d initialPose;
+    public Action traj_1 = null;
+    public Action traj_2 = null;
+    public Action traj_3 = null;
+    public Action traj_4 = null;
+    public Action traj_5 = null;
 
     @Override
     public void runOpMode() throws InterruptedException {
 
         if (Parameters.allianceColor == Parameters.Color.RED) {
-            alliance = "RED";
+            alliance = Turret.turretAlliance.RED;
         } else if (Parameters.allianceColor == Parameters.Color.BLUE) {
-            alliance = "BLUE";
+            alliance = Turret.turretAlliance.BLUE;
         }
 
         Pose2d initialPose = null;
 
-        if (Objects.equals(alliance, "RED")) {
-            initialPose = new Pose2d(19, 65, Math.toRadians(90));
-        }else if (Objects.equals(alliance, "BLUE")) {
-            initialPose = new Pose2d(19, -65, Math.toRadians(270));
+        if (Objects.equals(alliance, Turret.turretAlliance.RED)) {
+            initialPose = new Pose2d(65, 19, Math.toRadians(90));
+        }else if (Objects.equals(alliance, Turret.turretAlliance.BLUE)) {
+            initialPose = new Pose2d(65, -19, Math.toRadians(270));
         }
 
         MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
@@ -47,39 +53,39 @@ public class autoFar extends LinearOpMode {
 
         //red side
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
-                .strafeTo(new Vector2d(26,37));
+                .strafeTo(new Vector2d(37,26));
 
         TrajectoryActionBuilder tab2 = tab1.endTrajectory().fresh()
-                .strafeTo(new Vector2d(51,37))
-                .strafeTo(new Vector2d(19,65));
+                .strafeTo(new Vector2d(37,51))
+                .strafeTo(new Vector2d(63,19));
 
         TrajectoryActionBuilder tab3 =tab2.endTrajectory().fresh()
-                .strafeTo(new Vector2d(26,13));
+                .strafeTo(new Vector2d(13,26));
 
         TrajectoryActionBuilder tab4 =tab3.endTrajectory().fresh()
-                .strafeTo(new Vector2d(51,13))
-                .strafeTo(new Vector2d(19,65));
+                .strafeTo(new Vector2d(13,51))
+                .strafeTo(new Vector2d(63,19));
 
         TrajectoryActionBuilder tab5 =tab4.endTrajectory().fresh()
-                .strafeTo(new Vector2d(35,65));
+                .strafeTo(new Vector2d(62,38));
 
         //blue side now
         TrajectoryActionBuilder tab6 = drive.actionBuilder(initialPose)
                 .strafeTo(new Vector2d(26,-37));
 
         TrajectoryActionBuilder tab7 =tab6.endTrajectory().fresh()
-                .strafeTo(new Vector2d(51,-37))
-                .strafeTo(new Vector2d(19,-65));
+                .strafeTo(new Vector2d(37,-51))
+                .strafeTo(new Vector2d(63,-19));
 
         TrajectoryActionBuilder tab8= tab7.endTrajectory().fresh()
-                .strafeTo(new Vector2d(26,-13));
+                .strafeTo(new Vector2d(13,-26));
 
         TrajectoryActionBuilder tab9 = tab8.endTrajectory().fresh()
-                .strafeTo(new Vector2d(51,-13))
-                .strafeTo(new Vector2d(19,-65));
+                .strafeTo(new Vector2d(13,-51))
+                .strafeTo(new Vector2d(63,-19));
 
         TrajectoryActionBuilder tab10 =tab9.endTrajectory().fresh()
-                .strafeTo(new Vector2d(35,-65));
+                .strafeTo(new Vector2d(62,-38));
 
 
         waitForStart();
@@ -87,32 +93,19 @@ public class autoFar extends LinearOpMode {
 
         // set our trajectoryAction based on alliance color
         if (alliance == Turret.turretAlliance.RED) {
-            trajectoryActionChosen = tab1.build();
-            trajectoryActionChosen = tab2.build();
-            trajectoryActionChosen = tab3.build();
-            trajectoryActionChosen = tab4.build();
-            trajectoryActionChosen = tab5.build();
-        } else if (Objects.equals(alliance, "BLUE")) {
-
-            trajectoryActionChosen = tab6.build();
-            trajectoryActionChosen = tab7.build();
-            trajectoryActionChosen = tab8.build();
-            trajectoryActionChosen = tab9.build();
-            trajectoryActionChosen = tab10.build();
+            traj_1 = tab1.build();
+            traj_2 = tab2.build();
+            traj_3 = tab3.build();
+            traj_4 = tab4.build();
+            traj_5 = tab5.build();
+        } else if (alliance == Turret.turretAlliance.BLUE) {
+            traj_1 = tab6.build();
+            traj_2 = tab7.build();
+            traj_3 = tab8.build();
+            traj_4 = tab9.build();
+            traj_5 = tab10.build();
         }
 
-        Action traj_1 = tab1.build();
-        Action traj_2 = tab2.build();
-        Action traj_3 = tab3.build();
-        Action traj_4 = tab4.build();
-        Action traj_5 = tab5.build();
-        Action traj_6 = tab6.build();
-        Action traj_7 = tab7.build();
-        Action traj_8 = tab8.build();
-        Action traj_9 = tab9.build();
-        Action traj_10 =tab10.build();
-
-        //red side
         //shoot 3 balls
         Actions.runBlocking(traj_1);//drive to first spike mark
         //intake.setPower(1);
@@ -125,21 +118,6 @@ public class autoFar extends LinearOpMode {
         //intake.setPower(0)
         //shoot 3 balls
         Actions.runBlocking(traj_5);//drive to park
-
-
-        //blue side
-        //shoot 3 balls
-        Actions.runBlocking(traj_6);//drive to first spike mark
-        //intake.setPower(1);
-        Actions.runBlocking(traj_7); //drive to end of spike mark then shooting spot
-        //intake.setPower(0);
-        //shoot 3 balls
-        Actions.runBlocking(traj_8);//drive to 2nd spike mark
-        //intake.setPower(1);
-        Actions.runBlocking(traj_9);//drive to end of spike mark then shooting spot
-        //intake.setPower(0);
-        //shoot 3 balls
-        Actions.runBlocking(traj_10);//drive to park
 
     }
 }
