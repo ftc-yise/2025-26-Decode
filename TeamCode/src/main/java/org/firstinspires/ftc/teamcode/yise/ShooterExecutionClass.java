@@ -347,7 +347,7 @@ public class ShooterExecutionClass {
                         spindexer.sampleSensorsNow();
                         state = State.SPIN_WAIT;
                         timer.reset();
-                    } else if (timer.seconds() > 5) {
+                    } else if (timer.seconds() > 2.5) {
                         // Safety watchdog: don't stay stuck forever
                         spindexer.sampleSensorsNow();
                         state = State.SPIN_WAIT;
