@@ -554,25 +554,21 @@ public class ShooterExecutionClass {
     private boolean buildFiringPlanFromPattern() {
         patternMode = false;
         firingCount = 0;
+        Arrays.fill(firingPlan, -1);
 
-        // Snapshot queued colors without consuming them
+        if (patternMgr == null || !patternMgr.hasShots()) return false;
+
         Spindexer.BallColor[] queued = patternMgr.snapshot();
 
-        // Count the number of actual queued entries at the front
         int queuedCount = 0;
-        for (int i = 0; i < queued.length; i++) {
-            if (queued[i] == Spindexer.BallColor.NONE) break;
-            queuedCount++;
+        for (Spindexer.BallColor c : queued) {
+            if (c != Spindexer.BallColor.NONE) queuedCount++;
         }
         if (queuedCount == 0) return false;
 
-        // Current silo colors
         Spindexer.BallColor[] silos = spindexer.getTelemetry().siloColors;
         boolean[] used = new boolean[silos.length];
 
-        ArrayList<Integer> plan = new ArrayList<>();
-
-        // For each requested color, find a matching unused silo
         for (int q = 0; q < queuedCount; q++) {
             Spindexer.BallColor desired = queued[q];
             int found = -1;
@@ -584,34 +580,17 @@ public class ShooterExecutionClass {
                 }
             }
 
-            if (found != -1) {
-                plan.add(found);
-                used[found] = true;
-            } else {
-                // If none of the needed color is available, use the partial plan if there is one
-                if (plan.size() == 0) {
-                    return false;
-                } else {
-                    break;
-                }
+            if (found == -1) {
+                return false; // strict fail: do not allow a partial 2-shot plan
             }
+
+            firingPlan[firingCount++] = found;
+            used[found] = true;
         }
-
-        if (plan.isEmpty()) return false;
-
-        // Copy plan into fixed array form
-        firingCount = plan.size();
-        for (int i = 0; i < firingCount; i++) {
-            firingPlan[i] = plan.get(i);
-        }
-
-        // Fill the remaining entries with -1 so unused slots are obvious
-        for (int i = firingCount; i < firingPlan.length; i++) firingPlan[i] = -1;
 
         patternMode = true;
         return true;
     }
-
     // =========================================================
     // STATUS
     // =========================================================
