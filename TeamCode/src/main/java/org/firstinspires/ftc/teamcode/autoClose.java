@@ -8,6 +8,8 @@ import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.CRServo;
+import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -19,6 +21,7 @@ import org.firstinspires.ftc.teamcode.yise.ShotPatternManager;
 import org.firstinspires.ftc.teamcode.yise.Spindexer;
 import org.firstinspires.ftc.teamcode.yise.Turret;
 import org.firstinspires.ftc.teamcode.yise.lifter;
+import org.opencv.core.Mat;
 
 import java.util.Objects;
 
@@ -31,12 +34,23 @@ public class autoClose extends LinearOpMode {
     // this will hold the trajectoryAction we select based on alliance color
     public DcMotor intake;
     public Pose2d initialPose;
+    private CRServo walleft = null;
+    private CRServo wallright = null;
     Turret.turretAlliance alliance2 = Turret.turretAlliance.RED;
     private final ElapsedTime runtime = new ElapsedTime();
     public Action traj_1 = null;
     public Action traj_2 = null;
     public Action traj_3 = null;
     public Action traj_4 = null;
+    // Top color sensors
+    private ColorSensor middleT = null;
+    private ColorSensor backLeftT = null;
+    private ColorSensor backRightT = null;
+
+    // Bottom color sensors
+    private ColorSensor middleB = null;
+    private ColorSensor backLeftB = null;
+    private ColorSensor backRightB = null;
     private ShotPatternManager.ShotPattern patternFromTag(int tagId) {
         switch (tagId) {
             case 21: return ShotPatternManager.ShotPattern.GPP;
@@ -56,6 +70,15 @@ public class autoClose extends LinearOpMode {
         lifter lifter = new lifter(hardwareMap);
         ShooterExecutionClass autoShoot = new ShooterExecutionClass(spin, shooter, hardwareMap, lifter);
         intake = hardwareMap.get(DcMotor.class, "intake");
+        // Top color sensors
+        middleT = hardwareMap.get(ColorSensor.class, "middlecolorsensorT");
+        backLeftT = hardwareMap.get(ColorSensor.class, "BLcolorsensorT");
+        backRightT = hardwareMap.get(ColorSensor.class, "BRcolorsensorT");
+
+        // Bottom color sensors
+        middleB = hardwareMap.get(ColorSensor.class, "middlecolorsensorB");
+        backLeftB = hardwareMap.get(ColorSensor.class, "BLcolorsensorB");
+        backRightB = hardwareMap.get(ColorSensor.class, "BRcolorsensorB");
 
         if (Parameters.allianceColor == Parameters.Color.RED) {
             alliance = "RED";
@@ -66,6 +89,11 @@ public class autoClose extends LinearOpMode {
         }
         Turret turret = new Turret(hardwareMap, alliance2, telemetry);
         turret.limelight.pipelineSwitch(1);
+        walleft = hardwareMap.get(CRServo.class, "WallWheelLeft");
+        wallright = hardwareMap.get(CRServo.class, "WallWheelRight");
+
+        // Reverse one wall wheel so both spin in the intended feed direction
+        wallright.setDirection(CRServo.Direction.REVERSE);
 
 
         runtime.reset();
@@ -84,33 +112,36 @@ public class autoClose extends LinearOpMode {
 
         // RED Alliance Trajectories
         TrajectoryActionBuilder r_tab1 = drive.actionBuilder(initialPose)
-                .strafeTo(new Vector2d(-36,33))
-                .turn(Math.toRadians(180));
+                .strafeTo(new Vector2d(-36,25))
+                .turn(Math.toRadians(215));
 
         TrajectoryActionBuilder r_tab2 = r_tab1.endTrajectory().fresh()
+                .turn(Math.toRadians(-35))
                 .strafeTo(new Vector2d(-17,35));
 
         TrajectoryActionBuilder r_tab3 = r_tab2.endTrajectory().fresh()
                 .strafeTo(new Vector2d(-17,50))
-                .strafeTo(new Vector2d(-36,33));
+                .strafeToLinearHeading(new Vector2d(-36,25), Math.toRadians(125));
 
         TrajectoryActionBuilder r_tab4 = r_tab3.endTrajectory().fresh()
-                .strafeTo(new Vector2d(-16,36));
+                .strafeTo(new Vector2d(-44,20));
 
         //  BLUE Alliance Trajectories
         TrajectoryActionBuilder b_tab1 = drive.actionBuilder(initialPose)
-                .strafeTo(new Vector2d(-36,-33))
-                .turn(Math.toRadians(180));
+                .strafeTo(new Vector2d(-36,-25))
+                .turn(Math.toRadians(-215));
 
         TrajectoryActionBuilder b_tab2 = b_tab1.endTrajectory().fresh()
+                .turn(Math.toRadians(35))
                 .strafeTo(new Vector2d(-17,-35));
+
 
         TrajectoryActionBuilder b_tab3 = b_tab2.endTrajectory().fresh()
                 .strafeTo(new Vector2d(-17,-50))
-                .strafeTo(new Vector2d(-36,-33));
+                .strafeToLinearHeading(new Vector2d(-36,-25), Math.toRadians(235));
 
         TrajectoryActionBuilder b_tab4 = b_tab3.endTrajectory().fresh()
-                .strafeTo(new Vector2d(-16,-36));
+                .strafeTo(new Vector2d(-44,-20));
 
         while (!isStarted() && !isStopRequested()) {
             turret.mode = Turret.turretMode.AUTO;
@@ -136,7 +167,48 @@ public class autoClose extends LinearOpMode {
             telemetry.addData("pose", turret.getPose());
             telemetry.addData("id", turret.getID());
             telemetry.addData("pipeline", turret.limelight.getStatus().getPipelineIndex());
+
+            telemetry.addLine();
+            telemetry.addLine();
+            telemetry.addLine("=== COLOR SENSORS ===");
+            telemetry.addLine("MiddleTop");
+            telemetry.addData("Blue", middleT.blue());
+            telemetry.addData("Red", middleT.red());
+            telemetry.addData("Green", middleT.green());
+
+            telemetry.addLine();
+            telemetry.addLine("Back Left Top");
+            telemetry.addData("Blue", backLeftT.blue());
+            telemetry.addData("Red", backLeftT.red());
+            telemetry.addData("Green", backLeftT.green());
+
+            telemetry.addLine();
+            telemetry.addLine("Back Right Top");
+            telemetry.addData("Blue", backRightT.blue());
+            telemetry.addData("Red", backRightT.red());
+            telemetry.addData("Green", backRightT.green());
+
+            telemetry.addLine();
+            telemetry.addLine("Middle Bottom");
+            telemetry.addData("Blue", middleB.blue());
+            telemetry.addData("Red", middleB.red());
+            telemetry.addData("Green", middleB.green());
+
+            telemetry.addLine();
+            telemetry.addLine("Back Left Bottom");
+            telemetry.addData("Blue", backLeftB.blue());
+            telemetry.addData("Red", backLeftB.red());
+            telemetry.addData("Green", backLeftB.green());
+
+            telemetry.addLine();
+            telemetry.addLine("Back Right Bottom");
+            telemetry.addData("Blue", backRightB.blue());
+            telemetry.addData("Red", backRightB.red());
+            telemetry.addData("Green", backRightB.green());
+
+
             telemetry.update();
+            turret.limelight.pipelineSwitch(1);
         }
 
         if (isStopRequested()) return;
@@ -156,7 +228,13 @@ public class autoClose extends LinearOpMode {
             turret.limelight.pipelineSwitch(2);
         }
 
+        wallright.setPower(1);
+        walleft.setPower(1);
+        shooter.update(false, false,true);
+
         Actions.runBlocking(traj_1);//drive to shooting spot
+
+
 
         //shoot initial 3 balls
         runtime.reset();
@@ -164,6 +242,12 @@ public class autoClose extends LinearOpMode {
         //Close shooting method
         //==================================================
         while (opModeIsActive() && (runtime.seconds() < 9)) {
+
+            if (Objects.equals(alliance, "RED")) {
+                turret.limelight.pipelineSwitch(4);
+            } else if (Objects.equals(alliance, "BLUE")) {
+                turret.limelight.pipelineSwitch(2);
+            }
             // false,false,true = FAR false,true,false = CLOSE
             // hood.setTarget(50) = FAR hood.setTarget(35) = CLOSE
 
@@ -180,11 +264,11 @@ public class autoClose extends LinearOpMode {
 
             if (canSatisfyPattern(patternMgr, spin) && !autoShoot.isBusy()) {
                 shooter.update(false, true, false);
-                hood.setTarget(35);
+                hood.setTarget(25);
                 autoShoot.startCycle();
             } else {
                 shooter.update(false, true, false);
-                hood.setTarget(35);
+                hood.setTarget(25);
                 if (!autoShoot.forceShooting && !autoShoot.isBusy()) {
                     autoShoot.startForcedCycle();
                 }
@@ -194,6 +278,7 @@ public class autoClose extends LinearOpMode {
 
         Actions.runBlocking(traj_2);//drive to closest spike mark
         intake.setPower(1);
+        spin.startManualCycle();
         Actions.runBlocking(traj_3);//drive to end of spike mark then shooting spot
         intake.setPower(0);
         //shoot 3 balls
@@ -203,6 +288,12 @@ public class autoClose extends LinearOpMode {
         //Close shooting method
         //==================================================
         while (opModeIsActive() && (runtime.seconds() < 9)) {
+
+            if (Objects.equals(alliance, "RED")) {
+                turret.limelight.pipelineSwitch(4);
+            } else if (Objects.equals(alliance, "BLUE")) {
+                turret.limelight.pipelineSwitch(2);
+            }
             // false,false,true = FAR false,true,false = CLOSE
             // hood.setTarget(50) = FAR hood.setTarget(35) = CLOSE
 
@@ -219,11 +310,11 @@ public class autoClose extends LinearOpMode {
 
             if (canSatisfyPattern(patternMgr, spin) && !autoShoot.isBusy()) {
                 shooter.update(false, true, false);
-                hood.setTarget(35);
+                hood.setTarget(25);
                 autoShoot.startCycle();
             } else {
                 shooter.update(false, true, false);
-                hood.setTarget(35);
+                hood.setTarget(25);
                 if (!autoShoot.forceShooting && !autoShoot.isBusy()) {
                     autoShoot.startForcedCycle();
                 }

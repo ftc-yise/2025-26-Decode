@@ -521,11 +521,14 @@ public class Spindexer {
      * angle is used to determine which silo each sensor is "looking at."
      */
     private void mapSensorsToSilos(double currentAngle) {
-        ColorSensor[] sensors = { middleB, backLeftB, backRightB };
+        ColorSensor[] topSensors = { middleT, backLeftT, backRightT };
+        ColorSensor[] bottomSensors = { middleB, backLeftB, backRightB };
 
-        for (int sensorIdx = 0; sensorIdx < sensors.length; sensorIdx++) {
-            ColorSensor s = sensors[sensorIdx];
-            // compute the world angle that this sensor is "looking at"
+        for (int sensorIdx = 0; sensorIdx < 3; sensorIdx++) {
+            ColorSensor top = topSensors[sensorIdx];
+            ColorSensor bottom = bottomSensors[sensorIdx];
+
+            // compute the world angle that this sensor pair is "looking at"
             double sensorAngle = normalize(currentAngle + SENSOR_OFFSETS[sensorIdx]);
 
             // find nearest silo index for that angle (with hysteresis fallback)
@@ -539,15 +542,20 @@ public class Spindexer {
             }
 
             if (siloIndex != -1) {
-                // write the sensor reading into the silo slot
-                silos[siloIndex] = detectBall(s, sensorIdx);
+                BallColor topColor = (top != null) ? detectBall(top, sensorIdx) : BallColor.NONE;
+                BallColor bottomColor = (bottom != null) ? detectBall(bottom, sensorIdx) : BallColor.NONE;
+
+                // Use either sensor: if one sees it, take it.
+                // If both see something different, prefer top first.
+                BallColor sensed = combineBallColors(topColor, bottomColor);
+
+                silos[siloIndex] = sensed;
                 lastSeenSiloBySensor[sensorIdx] = siloIndex;
             } else {
                 lastSeenSiloBySensor[sensorIdx] = -1;
             }
         }
     }
-
     /**
      * Reads the sensors immediately and writes the detected colors into the silo array.
      *
@@ -562,6 +570,7 @@ public class Spindexer {
 
         // copy into telemetry packet so callers reading getTelemetry() see the update immediately
         for (int i = 0; i < 3; i++) {
+            siloColors[i] = silos[i];
             t.siloColors[i] = silos[i];
         }
     }
@@ -659,6 +668,15 @@ public class Spindexer {
             if (g > 250) return BallColor.GREEN;
             return BallColor.NONE;
         }
+    }
+
+    private BallColor combineBallColors(BallColor topColor, BallColor bottomColor) {
+        if (topColor == bottomColor) return topColor;
+        if (topColor == BallColor.NONE) return bottomColor;
+        if (bottomColor == BallColor.NONE) return topColor;
+
+        // conflict: both see different colors
+        return topColor; // or bottomColor, depending on which sensor you trust more
     }
 
     /**
