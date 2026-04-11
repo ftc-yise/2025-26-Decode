@@ -9,6 +9,7 @@ import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.yise.Parameters;
 import java.util.Objects;
@@ -18,7 +19,7 @@ import java.util.Objects;
 
 public class autoFar extends LinearOpMode {
     // default alliance is red
-    public String alliance = "RED";
+    public Turret.turretAlliance alliance = Turret.turretAlliance.RED;
     // this will hold the trajectoryAction we select based on alliance color
     public Action trajectoryActionChosen;
     public DcMotor intake;
@@ -85,7 +86,7 @@ public class autoFar extends LinearOpMode {
         if (isStopRequested()) return;
 
         // set our trajectoryAction based on alliance color
-        if (Objects.equals(alliance, "RED")) {
+        if (alliance == Turret.turretAlliance.RED) {
             trajectoryActionChosen = tab1.build();
             trajectoryActionChosen = tab2.build();
             trajectoryActionChosen = tab3.build();

@@ -19,12 +19,11 @@ public class autoExample extends LinearOpMode {
 
     @Override
     public void runOpMode() throws InterruptedException {
-        initialPose = new Pose2d(-18, -18, Math.toRadians(180));
+        initialPose = new Pose2d(0, 0, Math.toRadians(0));
 
         MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
-        drive.localizer.setPose(initialPose);
-
         intake = hardwareMap.get(DcMotor.class, "intake");
+
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
                 .strafeTo(new Vector2d(18,18));
 

@@ -160,11 +160,11 @@ public class ShooterClass {
                 break;
 
             case IDLE:
-                targetRPM = 3250;
+                targetRPM = 3150;
                 break;
 
             case LOW:
-                targetRPM = 3250;
+                targetRPM = 3115;
                 break;
 
             case FULL:

@@ -32,6 +32,9 @@ public class Ledclass {
     public void setBlue() {
         setColor(0.611);
     }
+    public void setRed() {
+        setColor(0.33);
+    }
 }
 
 
