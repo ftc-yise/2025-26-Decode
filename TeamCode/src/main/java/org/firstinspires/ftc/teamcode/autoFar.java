@@ -1,30 +1,18 @@
 package org.firstinspires.ftc.teamcode;
 
-import androidx.annotation.NonNull;
-
 import com.acmerobotics.dashboard.config.Config;
-
-import org.firstinspires.ftc.teamcode.yise.Hood;
-import org.firstinspires.ftc.teamcode.yise.ShooterClass;
-import org.firstinspires.ftc.teamcode.yise.ShooterExecutionClass;
-import org.firstinspires.ftc.teamcode.yise.ShotPatternManager;
-import org.firstinspires.ftc.teamcode.yise.Spindexer;
-import org.firstinspires.ftc.teamcode.yise.Turret;
-import org.firstinspires.ftc.teamcode.yise.lifter;
-
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
-import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
-
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.yise.Parameters;
-
+import java.util.Objects;
 
 @Config
 @Autonomous(name = "autoFar", group = "Linear Opmode")
@@ -35,117 +23,123 @@ public class autoFar extends LinearOpMode {
     // this will hold the trajectoryAction we select based on alliance color
     public Action trajectoryActionChosen;
     public DcMotor intake;
-    public class ShootAction implements Action {
-
-        private final ShooterExecutionClass autoShoot;
-        private final ShooterClass shooter;
-        private final Spindexer spin;
-        private final Hood hood;
-        private final lifter lifter;
-        private final Turret turret;
-        private final ShotPatternManager patternMgr;
-
-        private final ElapsedTime runtime = new ElapsedTime();
-
-        public ShootAction() {
-            patternMgr = new ShotPatternManager();
-            shooter = new ShooterClass(hardwareMap);
-            spin = new Spindexer(hardwareMap);
-            hood = new Hood(hardwareMap);
-            lifter = new lifter(hardwareMap);
-            autoShoot = new ShooterExecutionClass(spin, shooter, hardwareMap, lifter);
-            turret = new Turret(hardwareMap, alliance, telemetry);
-
-            autoShoot.setPatternManager(patternMgr);
-            runtime.reset();
-        }
-
-        @Override
-        public boolean run(@NonNull com.acmerobotics.dashboard.telemetry.TelemetryPacket packet) {
-
-            turret.autoMode();
-            turret.mode = Turret.turretMode.AUTO;
-
-            hood.update();
-            spin.sampleSensorsNow();
-            spin.update();
-            autoShoot.update();
-            lifter.update();
-
-            if (!autoShoot.isBusy()) {
-                shooter.update(false, true, false);
-                hood.setTarget(35);
-                autoShoot.startCycle();
-            }
-
-            // run for 3 seconds instead of 9 (faster auto)
-            return runtime.seconds() < 3;
-        }
-    }
+    public Pose2d initialPose;
 
     @Override
     public void runOpMode() throws InterruptedException {
 
-        // default alliance is red, only overwrite if blue was chosen in game values
-        if (Parameters.allianceColor == Parameters.Color.BLUE) {
-            alliance = Turret.turretAlliance.BLUE;
+        if (Parameters.allianceColor == Parameters.Color.RED) {
+            alliance = "RED";
+        } else if (Parameters.allianceColor == Parameters.Color.BLUE) {
+            alliance = "BLUE";
         }
 
-        // instantiate drive class (MecanumDrive) at a particular pose.
         Pose2d initialPose = null;
-        if (alliance == Turret.turretAlliance.RED) {
-            initialPose = new Pose2d(63, -12, Math.toRadians(0));
-        }else if (alliance == Turret.turretAlliance.BLUE) {
-            initialPose = new Pose2d(63, -12, Math.toRadians(90));
-        }
-        MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
-        //Intake intake = new Intake(hardwareMap);
-        intake = hardwareMap.get(DcMotor.class, "intake");
 
-        // we build our trajectories during initialization to avoid wasting time during auto
-        // tab one is for red
-        TrajectoryActionBuilder tab2 = drive.actionBuilder(initialPose)
-                .stopAndAdd(new ShootAction())
-                .strafeToLinearHeading(new Vector2d(33, 12), Math.toRadians(90))
-                //turn on intake
-                .strafeToLinearHeading(new Vector2d(33,50), Math.toRadians(90))
-                //turn of intake
-                .strafeToLinearHeading(new Vector2d(61,12), Math.toRadians(90))
-                .stopAndAdd(new ShootAction())
-                .strafeToLinearHeading(new Vector2d(11,12), Math.toRadians(90))
-                //turn on intake
-                .strafeToLinearHeading(new Vector2d(11,50), Math.toRadians(90))
-                //turn of intake
-                .strafeToLinearHeading(new Vector2d(61,12), Math.toRadians(90))
-                .stopAndAdd(new ShootAction());
-        // tab two is for blue
+        if (Objects.equals(alliance, "RED")) {
+            initialPose = new Pose2d(19, 65, Math.toRadians(90));
+        }else if (Objects.equals(alliance, "BLUE")) {
+            initialPose = new Pose2d(19, -65, Math.toRadians(270));
+        }
+
+        MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
+        drive.localizer.setPose(initialPose);
+
+        //red side
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
-                //.stopAndAdd(new ShootAction())
-                .strafeToConstantHeading(new Vector2d(33, -12));
-                //turn on intake
-               /* .strafeToLinearHeading(new Vector2d(33,-50), Math.toRadians(270))
-                //turn of intake
-                .strafeToLinearHeading(new Vector2d(61,-12), Math.toRadians(270))
-                .stopAndAdd(new ShootAction())
-                .strafeToLinearHeading(new Vector2d(11,-12), Math.toRadians(270))
-                //turn on intake
-                .strafeToLinearHeading(new Vector2d(11, -50), Math.toRadians(270))
-                //turn of intake
-                .strafeToLinearHeading(new Vector2d(61,-12), Math.toRadians(270))
-                .stopAndAdd(new ShootAction());
-*/
+                .strafeTo(new Vector2d(26,37));
+
+        TrajectoryActionBuilder tab2 = tab1.endTrajectory().fresh()
+                .strafeTo(new Vector2d(51,37))
+                .strafeTo(new Vector2d(19,65));
+
+        TrajectoryActionBuilder tab3 =tab2.endTrajectory().fresh()
+                .strafeTo(new Vector2d(26,13));
+
+        TrajectoryActionBuilder tab4 =tab3.endTrajectory().fresh()
+                .strafeTo(new Vector2d(51,13))
+                .strafeTo(new Vector2d(19,65));
+
+        TrajectoryActionBuilder tab5 =tab4.endTrajectory().fresh()
+                .strafeTo(new Vector2d(35,65));
+
+        //blue side now
+        TrajectoryActionBuilder tab6 = drive.actionBuilder(initialPose)
+                .strafeTo(new Vector2d(26,-37));
+
+        TrajectoryActionBuilder tab7 =tab6.endTrajectory().fresh()
+                .strafeTo(new Vector2d(51,-37))
+                .strafeTo(new Vector2d(19,-65));
+
+        TrajectoryActionBuilder tab8= tab7.endTrajectory().fresh()
+                .strafeTo(new Vector2d(26,-13));
+
+        TrajectoryActionBuilder tab9 = tab8.endTrajectory().fresh()
+                .strafeTo(new Vector2d(51,-13))
+                .strafeTo(new Vector2d(19,-65));
+
+        TrajectoryActionBuilder tab10 =tab9.endTrajectory().fresh()
+                .strafeTo(new Vector2d(35,-65));
+
+
         waitForStart();
         if (isStopRequested()) return;
 
         // set our trajectoryAction based on alliance color
         if (alliance == Turret.turretAlliance.RED) {
             trajectoryActionChosen = tab1.build();
-        } else if (alliance == Turret.turretAlliance.BLUE) {
             trajectoryActionChosen = tab2.build();
+            trajectoryActionChosen = tab3.build();
+            trajectoryActionChosen = tab4.build();
+            trajectoryActionChosen = tab5.build();
+        } else if (Objects.equals(alliance, "BLUE")) {
+
+            trajectoryActionChosen = tab6.build();
+            trajectoryActionChosen = tab7.build();
+            trajectoryActionChosen = tab8.build();
+            trajectoryActionChosen = tab9.build();
+            trajectoryActionChosen = tab10.build();
         }
 
-        intake.setPower(1);
-        Actions.runBlocking(trajectoryActionChosen);
-        intake.setPower(0);
+        Action traj_1 = tab1.build();
+        Action traj_2 = tab2.build();
+        Action traj_3 = tab3.build();
+        Action traj_4 = tab4.build();
+        Action traj_5 = tab5.build();
+        Action traj_6 = tab6.build();
+        Action traj_7 = tab7.build();
+        Action traj_8 = tab8.build();
+        Action traj_9 = tab9.build();
+        Action traj_10 =tab10.build();
+
+        //red side
+        //shoot 3 balls
+        Actions.runBlocking(traj_1);//drive to first spike mark
+        //intake.setPower(1);
+        Actions.runBlocking(traj_2);//drive to end of spike mark then shooting spot
+        //intake.setPower(0)
+        //shoot 3 balls
+        Actions.runBlocking(traj_3);//drive to 2nd spike mark
+        //intake.setPower(1);
+        Actions.runBlocking(traj_4);//drive to end of spike mark then shooting spot
+        //intake.setPower(0)
+        //shoot 3 balls
+        Actions.runBlocking(traj_5);//drive to park
+
+
+        //blue side
+        //shoot 3 balls
+        Actions.runBlocking(traj_6);//drive to first spike mark
+        //intake.setPower(1);
+        Actions.runBlocking(traj_7); //drive to end of spike mark then shooting spot
+        //intake.setPower(0);
+        //shoot 3 balls
+        Actions.runBlocking(traj_8);//drive to 2nd spike mark
+        //intake.setPower(1);
+        Actions.runBlocking(traj_9);//drive to end of spike mark then shooting spot
+        //intake.setPower(0);
+        //shoot 3 balls
+        Actions.runBlocking(traj_10);//drive to park
+
     }
 }
