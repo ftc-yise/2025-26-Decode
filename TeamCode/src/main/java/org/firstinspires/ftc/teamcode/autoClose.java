@@ -29,12 +29,14 @@ public class autoClose extends LinearOpMode {
     // default alliance is red
     public String alliance = "RED";
     // this will hold the trajectoryAction we select based on alliance color
-    public Action trajectoryActionChosen;
     public DcMotor intake;
     public Pose2d initialPose;
     Turret.turretAlliance alliance2 = Turret.turretAlliance.RED;
     private final ElapsedTime runtime = new ElapsedTime();
-
+    public Action traj_1 = null;
+    public Action traj_2 = null;
+    public Action traj_3 = null;
+    public Action traj_4 = null;
     private ShotPatternManager.ShotPattern patternFromTag(int tagId) {
         switch (tagId) {
             case 21: return ShotPatternManager.ShotPattern.GPP;
@@ -80,34 +82,34 @@ public class autoClose extends LinearOpMode {
         MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
         drive.localizer.setPose(initialPose);
 
-        //positions 1-4 are for red side only
-        TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
+        // RED Alliance Trajectories
+        TrajectoryActionBuilder r_tab1 = drive.actionBuilder(initialPose)
                 .strafeTo(new Vector2d(-36,33))
                 .turn(Math.toRadians(180));
 
-        TrajectoryActionBuilder tab2 = tab1.endTrajectory().fresh()
+        TrajectoryActionBuilder r_tab2 = r_tab1.endTrajectory().fresh()
                 .strafeTo(new Vector2d(-17,35));
 
-        TrajectoryActionBuilder tab3 =tab2.endTrajectory().fresh()
+        TrajectoryActionBuilder r_tab3 = r_tab2.endTrajectory().fresh()
                 .strafeTo(new Vector2d(-17,50))
                 .strafeTo(new Vector2d(-36,33));
 
-        TrajectoryActionBuilder tab4 =tab3.endTrajectory().fresh()
+        TrajectoryActionBuilder r_tab4 = r_tab3.endTrajectory().fresh()
                 .strafeTo(new Vector2d(-16,36));
 
-        //blue side now
-        TrajectoryActionBuilder tab5 = drive.actionBuilder(initialPose)
+        //  BLUE Alliance Trajectories
+        TrajectoryActionBuilder b_tab1 = drive.actionBuilder(initialPose)
                 .strafeTo(new Vector2d(-36,-33))
                 .turn(Math.toRadians(180));
 
-        TrajectoryActionBuilder tab6 =tab5.endTrajectory().fresh()
+        TrajectoryActionBuilder b_tab2 = b_tab1.endTrajectory().fresh()
                 .strafeTo(new Vector2d(-17,-35));
 
-        TrajectoryActionBuilder tab7= tab6.endTrajectory().fresh()
+        TrajectoryActionBuilder b_tab3 = b_tab2.endTrajectory().fresh()
                 .strafeTo(new Vector2d(-17,-50))
                 .strafeTo(new Vector2d(-36,-33));
 
-        TrajectoryActionBuilder tab8= tab7.endTrajectory().fresh()
+        TrajectoryActionBuilder b_tab4 = b_tab3.endTrajectory().fresh()
                 .strafeTo(new Vector2d(-16,-36));
 
         while (!isStarted() && !isStopRequested()) {
@@ -141,181 +143,94 @@ public class autoClose extends LinearOpMode {
 
         // set our trajectoryAction based on alliance color
         if (Objects.equals(alliance, "RED")) {
-            trajectoryActionChosen = tab1.build();
-            trajectoryActionChosen = tab2.build();
-            trajectoryActionChosen = tab3.build();
-            trajectoryActionChosen = tab4.build();
+            traj_1 = r_tab1.build();
+            traj_2 = r_tab2.build();
+            traj_3 = r_tab3.build();
+            traj_4 = r_tab4.build();
             turret.limelight.pipelineSwitch(4);
         } else if (Objects.equals(alliance, "BLUE")) {
-            trajectoryActionChosen = tab5.build();
-            trajectoryActionChosen = tab6.build();
-            trajectoryActionChosen = tab7.build();
-            trajectoryActionChosen = tab8.build();
+            traj_1 = b_tab1.build();
+            traj_2 = b_tab2.build();
+            traj_3 = b_tab3.build();
+            traj_4 = b_tab4.build();
             turret.limelight.pipelineSwitch(2);
         }
 
-        Action traj_1 = tab1.build();
-        Action traj_2 = tab2.build();
-        Action traj_3 = tab3.build();
-        Action traj_4 = tab4.build();
-        Action traj_5 = tab5.build();
-        Action traj_6 = tab6.build();
-        Action traj_7 = tab7.build();
-        Action traj_8 = tab8.build();
+        Actions.runBlocking(traj_1);//drive to shooting spot
 
+        //shoot initial 3 balls
+        runtime.reset();
+        //==================================================
+        //Close shooting method
+        //==================================================
+        while (opModeIsActive() && (runtime.seconds() < 9)) {
+            // false,false,true = FAR false,true,false = CLOSE
+            // hood.setTarget(50) = FAR hood.setTarget(35) = CLOSE
 
-// set our trajectoryAction based on alliance color
-        if (Objects.equals(alliance, "RED")) {
-            //red side
-            Actions.runBlocking(traj_1);//drive to shooting spot
-
-            //shoot initial 3 balls
-            runtime.reset();
             //==================================================
-            //Close shooting method
+            //updates
             //==================================================
-            while (opModeIsActive() && (runtime.seconds() < 9)) {
-                // false,false,true = FAR false,true,false = CLOSE
-                // hood.setTarget(50) = FAR hood.setTarget(35) = CLOSE
+            turret.autoMode();
+            turret.mode = Turret.turretMode.AUTO;
+            hood.update();
+            spin.sampleSensorsNow();
+            spin.update();
+            autoShoot.update();
+            lifter.update();
 
-                //==================================================
-                //updates
-                //==================================================
-                turret.autoMode();
-                turret.mode = Turret.turretMode.AUTO;
-                hood.update();
-                spin.sampleSensorsNow();
-                spin.update();
-                autoShoot.update();
-                lifter.update();
-
-                if (canSatisfyPattern(patternMgr, spin) && !autoShoot.isBusy()) {
-                    shooter.update(false, true, false);
-                    hood.setTarget(35);
-                    autoShoot.startCycle();
-                } else {
-                    shooter.update(false, true, false);
-                    hood.setTarget(35);
-                    if (!autoShoot.forceShooting && !autoShoot.isBusy()) {
-                        autoShoot.startForcedCycle();
-                    }
-
+            if (canSatisfyPattern(patternMgr, spin) && !autoShoot.isBusy()) {
+                shooter.update(false, true, false);
+                hood.setTarget(35);
+                autoShoot.startCycle();
+            } else {
+                shooter.update(false, true, false);
+                hood.setTarget(35);
+                if (!autoShoot.forceShooting && !autoShoot.isBusy()) {
+                    autoShoot.startForcedCycle();
                 }
+
             }
-
-            Actions.runBlocking(traj_2);//drive to closest spike mark
-            intake.setPower(1);
-            Actions.runBlocking(traj_3);//drive to end of spike mark then shooting spot
-            intake.setPower(0);
-            //shoot 3 balls
-            // Step #:  Shooting
-            runtime.reset();
-            //==================================================
-            //Close shooting method
-            //==================================================
-            while (opModeIsActive() && (runtime.seconds() < 9)) {
-                // false,false,true = FAR false,true,false = CLOSE
-                // hood.setTarget(50) = FAR hood.setTarget(35) = CLOSE
-
-                //==================================================
-                //updates
-                //==================================================
-                turret.autoMode();
-                turret.mode = Turret.turretMode.AUTO;
-                hood.update();
-                spin.sampleSensorsNow();
-                spin.update();
-                autoShoot.update();
-                lifter.update();
-
-                if (canSatisfyPattern(patternMgr, spin) && !autoShoot.isBusy()) {
-                    shooter.update(false, true, false);
-                    hood.setTarget(35);
-                    autoShoot.startCycle();
-                } else {
-                    shooter.update(false, true, false);
-                    hood.setTarget(35);
-                    if (!autoShoot.forceShooting && !autoShoot.isBusy()) {
-                        autoShoot.startForcedCycle();
-                    }
-
-                }
-            }
-            Actions.runBlocking(traj_4);//drive to park
-
-        } else if (Objects.equals(alliance, "BLUE")) {
-
-            //blue side
-            Actions.runBlocking(traj_5);//drive to shooting spot
-            //shoot initial 3 balls
-            runtime.reset();
-            //==================================================
-            //Close shooting method
-            //==================================================
-            while (opModeIsActive() && (runtime.seconds() < 9)) {
-                // false,false,true = FAR false,true,false = CLOSE
-                // hood.setTarget(50) = FAR hood.setTarget(35) = CLOSE
-
-                //==================================================
-                //updates
-                //==================================================
-                turret.autoMode();
-                turret.mode = Turret.turretMode.AUTO;
-                hood.update();
-                spin.sampleSensorsNow();
-                spin.update();
-                autoShoot.update();
-                lifter.update();
-
-                if (canSatisfyPattern(patternMgr, spin) && !autoShoot.isBusy()) {
-                    shooter.update(false, true, false);
-                    hood.setTarget(35);
-                    autoShoot.startCycle();
-                } else {
-                    shooter.update(false, true, false);
-                    hood.setTarget(35);
-                    if (!autoShoot.forceShooting && !autoShoot.isBusy()) {
-                        autoShoot.startForcedCycle();
-                    }
-
-                }
-            }
-            Actions.runBlocking(traj_6);//drive to closest spike mark
-            //intake.setPower(1);
-            Actions.runBlocking(traj_7);//drive to end of spike mark then shooting spot
-            //intake.setPower(0);
-            //shoot 3 balls
-            runtime.reset();
-            //==================================================
-            //Close shooting method
-            //==================================================
-            while (opModeIsActive() && (runtime.seconds() < 9)) {
-                //==================================================
-                //updates
-                //==================================================
-                turret.autoMode();
-                turret.mode = Turret.turretMode.AUTO;
-                hood.update();
-                spin.sampleSensorsNow();
-                spin.update();
-                autoShoot.update();
-                lifter.update();
-
-                if (canSatisfyPattern(patternMgr, spin) && !autoShoot.isBusy()) {
-                    shooter.update(false, true, false);
-                    hood.setTarget(35);
-                    autoShoot.startCycle();
-                } else {
-                    shooter.update(false, true, false);
-                    hood.setTarget(35);
-                    if (!autoShoot.forceShooting && !autoShoot.isBusy()) {
-                        autoShoot.startForcedCycle();
-                    }
-
-                }
-            }
-            Actions.runBlocking(traj_8);//drive to park
         }
+
+        Actions.runBlocking(traj_2);//drive to closest spike mark
+        intake.setPower(1);
+        Actions.runBlocking(traj_3);//drive to end of spike mark then shooting spot
+        intake.setPower(0);
+        //shoot 3 balls
+        // Step #:  Shooting
+        runtime.reset();
+        //==================================================
+        //Close shooting method
+        //==================================================
+        while (opModeIsActive() && (runtime.seconds() < 9)) {
+            // false,false,true = FAR false,true,false = CLOSE
+            // hood.setTarget(50) = FAR hood.setTarget(35) = CLOSE
+
+            //==================================================
+            //updates
+            //==================================================
+            turret.autoMode();
+            turret.mode = Turret.turretMode.AUTO;
+            hood.update();
+            spin.sampleSensorsNow();
+            spin.update();
+            autoShoot.update();
+            lifter.update();
+
+            if (canSatisfyPattern(patternMgr, spin) && !autoShoot.isBusy()) {
+                shooter.update(false, true, false);
+                hood.setTarget(35);
+                autoShoot.startCycle();
+            } else {
+                shooter.update(false, true, false);
+                hood.setTarget(35);
+                if (!autoShoot.forceShooting && !autoShoot.isBusy()) {
+                    autoShoot.startForcedCycle();
+                }
+
+            }
+        }
+        Actions.runBlocking(traj_4);//drive to park
     }
 
     private boolean canSatisfyPattern(ShotPatternManager patternMgr, Spindexer spin) {
