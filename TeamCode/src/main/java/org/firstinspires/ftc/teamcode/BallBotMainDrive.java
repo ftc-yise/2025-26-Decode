@@ -777,6 +777,7 @@ public class  BallBotMainDrive extends LinearOpMode {
             telemetry.addData("Pose (x,y,h)", "%.2f, %.2f, %.2f", d.pose.x, d.pose.y, d.pose.h);
 
 // SPINDEXER
+*/
             telemetry.addLine("=== SPINDEXER ===");
             telemetry.addData("Mode", spina.mode);
             telemetry.addData("Voltage", "%.3f", spina.voltage);
@@ -787,6 +788,7 @@ public class  BallBotMainDrive extends LinearOpMode {
             telemetry.addData("A", a);
             telemetry.addData("X", x);
             telemetry.addData("shots", autoShoot.shots);
+            /*
 
 // TURRET
 
@@ -866,8 +868,9 @@ public class  BallBotMainDrive extends LinearOpMode {
 
 
             telemetry.addData("limiit", limit.getState());
+           */
             telemetry.update();
-
+/*
 
 
 

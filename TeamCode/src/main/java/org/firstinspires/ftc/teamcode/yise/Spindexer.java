@@ -91,7 +91,7 @@ public class Spindexer {
     // Hardcoded target angles for the three named silos
     private static final double SILO_1_TARGET_DEG = 303.5;
     private static final double SILO_2_TARGET_DEG = 183.5;
-    private static final double SILO_3_TARGET_DEG = 64.5;
+    private static final double SILO_3_TARGET_DEG = 60.5;
 
     // Keep existing angle-based silo definitions for compatibility
     // These are still used by color matching and initSilos().
@@ -656,8 +656,8 @@ public class Spindexer {
         int b = s.blue();
 
         if (sensorIndex == 0) { // middle sensor
-            if (b > 350 && b > g) return BallColor.PURPLE;
-            else if (g > 300) return BallColor.GREEN;
+            if (b > 185 && b > g) return BallColor.PURPLE;
+            else if (g > 185) return BallColor.GREEN;
             return BallColor.NONE;
         } else if (sensorIndex == 1) { // backLeft
             if (b > 225  && b > g) return BallColor.PURPLE;
