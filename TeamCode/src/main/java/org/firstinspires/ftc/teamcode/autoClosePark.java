@@ -41,7 +41,7 @@ public class autoClosePark extends LinearOpMode {
         if (Objects.equals(alliance, Turret.turretAlliance.RED)) {
             initialPose = new Pose2d(-65, 43, Math.toRadians(270));
         }else if (Objects.equals(alliance, Turret.turretAlliance.BLUE)) {
-            initialPose = new Pose2d(-65, -43, Math.toRadians(180));
+            initialPose = new Pose2d(-65, -43, Math.toRadians(90));
         }
 
         MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);

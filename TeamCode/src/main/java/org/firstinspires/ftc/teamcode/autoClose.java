@@ -76,7 +76,7 @@ public class autoClose extends LinearOpMode {
         if (Objects.equals(alliance, "RED")) {
             initialPose = new Pose2d(-64, 43, Math.toRadians(270));
         }else if (Objects.equals(alliance, "BLUE")) {
-            initialPose = new Pose2d(-64, -43, Math.toRadians(180));
+            initialPose = new Pose2d(-64, -43, Math.toRadians(90));
         }
 
         MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
