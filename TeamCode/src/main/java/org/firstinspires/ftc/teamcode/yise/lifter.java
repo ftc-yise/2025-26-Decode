@@ -24,12 +24,12 @@ public class lifter {
     private double UP_POS = 1.0;
 
     // ---- TUNING (SAFE VALUES) ----
-    private double kP = 0.85;
+    private double kP = 0.95;
     private double kD = 0.002;      // VERY small
     private double holdPower = 0.04;
 
     private static final double DEADZONE = 0.0007;
-    private static final double MAX_POWER = 0.6;
+    private static final double MAX_POWER = 0.8;
 
     // state
     private double lastPos = 0.0;

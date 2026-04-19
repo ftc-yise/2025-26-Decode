@@ -29,13 +29,13 @@ import java.util.Objects;
 
 public class autoFarLoadingZone extends LinearOpMode {
     // default alliance is red
-    public Turret.turretAlliance alliance = Turret.turretAlliance.RED;
+    public Turret.turretAlliance alliance;
     // this will hold the trajectoryAction we select based on alliance color
     public DcMotor intake;
     public Pose2d initialPose;
     private CRServo walleft = null;
     private CRServo wallright = null;
-    Turret.turretAlliance alliance2 = Turret.turretAlliance.RED;
+    Turret.turretAlliance alliance2;
     private final ElapsedTime runtime = new ElapsedTime();
     // Top color sensors
     private ColorSensor middleT = null;
@@ -80,8 +80,7 @@ public class autoFarLoadingZone extends LinearOpMode {
         backLeftB = hardwareMap.get(ColorSensor.class, "BLcolorsensorB");
         backRightB = hardwareMap.get(ColorSensor.class, "BRcolorsensorB");
 
-        Turret turret = new Turret(hardwareMap, alliance2, telemetry);
-        turret.limelight.pipelineSwitch(1);
+
         walleft = hardwareMap.get(CRServo.class, "WallWheelLeft");
         wallright = hardwareMap.get(CRServo.class, "WallWheelRight");
 
@@ -95,13 +94,13 @@ public class autoFarLoadingZone extends LinearOpMode {
             alliance = Turret.turretAlliance.BLUE;
             alliance2 = Turret.turretAlliance.BLUE;
         }
+        Turret turret = new Turret(hardwareMap, alliance2, telemetry);
+        turret.limelight.pipelineSwitch(1);
 
-
-        Pose2d initialPose = null;
 
         if (Objects.equals(alliance, Turret.turretAlliance.RED)) {
             initialPose = new Pose2d(65, 19, Math.toRadians(90));
-        }else if (Objects.equals(alliance, Turret.turretAlliance.BLUE)) {
+        }else {
             initialPose = new Pose2d(65, -19, Math.toRadians(270));
         }
 
@@ -110,24 +109,32 @@ public class autoFarLoadingZone extends LinearOpMode {
 
         //red side
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)
-                .strafeTo(new Vector2d(62,58));
+                .strafeTo(new Vector2d(65,60))
+                .strafeTo(new Vector2d(65,58))
+                .strafeTo(new Vector2d(65,60))
+                .waitSeconds(1);
         TrajectoryActionBuilder tab2 = tab1.endTrajectory().fresh()
-                .strafeTo(new Vector2d(62,19));
+                .strafeTo(new Vector2d(65,23));
 
         TrajectoryActionBuilder tab3 = tab2.endTrajectory().fresh()
-                .strafeTo(new Vector2d(62,38));
+                .strafeTo(new Vector2d(65,38));
 
         //blue side now
         TrajectoryActionBuilder tab4 =drive.actionBuilder(initialPose)
-                .strafeTo(new Vector2d(62,-58));
+                .strafeTo(new Vector2d(65,-60))
+                .strafeTo(new Vector2d(65,-58))
+                .strafeTo(new Vector2d(65,-60))
+                .waitSeconds(1);
 
         TrajectoryActionBuilder tab5 =tab4.endTrajectory().fresh()
-                .strafeTo(new Vector2d(62,-19));
+                .strafeTo(new Vector2d(65,-23));
 
         TrajectoryActionBuilder tab6 = tab5.endTrajectory().fresh()
-                .strafeTo(new Vector2d(62,-38));
+                .strafeTo(new Vector2d(65,-38));
 
         while (!isStarted() && !isStopRequested()) {
+            turret.limelight.pipelineSwitch(1);
+
             turret.mode = Turret.turretMode.AUTO;
             int tagId = turret.getID();
             ShotPatternManager.ShotPattern p = patternFromTag(tagId);
@@ -192,7 +199,6 @@ public class autoFarLoadingZone extends LinearOpMode {
 
 
             telemetry.update();
-            turret.limelight.pipelineSwitch(1);
         }
         if (isStopRequested()) return;
 
@@ -208,16 +214,20 @@ public class autoFarLoadingZone extends LinearOpMode {
         }
 
         runtime.reset();
+        shooter.update(false, false, true);
+
+        if (alliance2 == Turret.turretAlliance.RED) {
+            turret.limelight.pipelineSwitch(4);
+        } else if (alliance2 == Turret.turretAlliance.BLUE) {
+            turret.limelight.pipelineSwitch(2);
+        }
+
+        sleep(500);
         //==================================================
         //Close shooting method
         //==================================================
         while (opModeIsActive() && (runtime.seconds() < 14)) {
 
-            if (alliance2 == Turret.turretAlliance.RED) {
-                turret.limelight.pipelineSwitch(4);
-            } else if (alliance2 == Turret.turretAlliance.BLUE) {
-                turret.limelight.pipelineSwitch(2);
-            }
             // false,false,true = FAR false,true,false = CLOSE
             // hood.setTarget(50) = FAR hood.setTarget(35) = CLOSE
 

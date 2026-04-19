@@ -31,7 +31,7 @@ public class ShooterClass {
     // ======================================================
     // PIDF (REV VELOCITY CONTROLLER)
     // ======================================================
-    private double kP = 0.0082;
+    private double kP = 0.0122;
     private double kI = 0.00;
     private double kD = 0.000;
     private double kF = BASE_F;
@@ -160,11 +160,11 @@ public class ShooterClass {
                 break;
 
             case IDLE:
-                targetRPM = 3150;
+                targetRPM = 3100;
                 break;
 
             case LOW:
-                targetRPM = 3115;
+                targetRPM = 3150;
                 break;
 
             case FULL:

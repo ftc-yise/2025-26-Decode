@@ -92,16 +92,17 @@ public class autoClosePark extends LinearOpMode {
 
         // Reverse one wall wheel so both spin in the intended feed direction
         wallright.setDirection(CRServo.Direction.REVERSE);
-        Pose2d initialPose = null;
 
-        if (Objects.equals(alliance, Turret.turretAlliance.RED)) {
-            initialPose = new Pose2d(-65, 43, Math.toRadians(270));
-        }else if (Objects.equals(alliance, Turret.turretAlliance.BLUE)) {
-            initialPose = new Pose2d(-65, -43, Math.toRadians(90));
+        if (Parameters.allianceColor == Parameters.Color.RED) {
+            this.initialPose = new Pose2d(-65, 43, Math.toRadians(270));
+            alliance2 = Turret.turretAlliance.RED;
+        } else if (Parameters.allianceColor == Parameters.Color.BLUE) {
+            this.initialPose = new Pose2d(-65, -43, Math.toRadians(90));
+            alliance2 = Turret.turretAlliance.BLUE;
         }
 
-        MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
-        drive.localizer.setPose(initialPose);
+        MecanumDrive drive = new MecanumDrive(hardwareMap, this.initialPose);
+        drive.localizer.setPose(this.initialPose);
 
         //red side
         TrajectoryActionBuilder tab1 = drive.actionBuilder(initialPose)

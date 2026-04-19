@@ -82,6 +82,7 @@ public class  BallBotMainDrive extends LinearOpMode {
     // Left turret encoder limit and home target
     private static final int LEFT_LIMIT = -1370;
     public boolean once = true;
+    public boolean onceLED = true;
     private static final int CENTER_TARGET = -685;
 
     // Distance threshold used when deciding whether the turret is "close enough" to home
@@ -331,12 +332,12 @@ public class  BallBotMainDrive extends LinearOpMode {
                 // On the rising edge, attempt a pattern-aware cycle
                 if (canSatisfyPattern(patternMgr, spin) && !autoShoot.isBusy()) {
                     shooter.update(false, false, true);
-                    hood.setTarget(60);
+                    hood.setTarget(55);
                     autoShoot.startCycle();
                 } else {
                     // If the current pattern cannot be satisfied, begin forced shooting
                     shooter.update(false, false, true);
-                    hood.setTarget(60);
+                    hood.setTarget(55);
                     if (!autoShoot.forceShooting && !autoShoot.isBusy()) {
                         autoShoot.startForcedCycle();
                     }
@@ -344,7 +345,7 @@ public class  BallBotMainDrive extends LinearOpMode {
             } else if (a) {
                 // While held, keep forced shooting alive
                 shooter.update(false, false, true);
-                hood.setTarget(60);
+                hood.setTarget(55);
                 if (!autoShoot.forceShooting && !autoShoot.isBusy()) {
                     autoShoot.startForcedCycle();
                 }
@@ -356,18 +357,18 @@ public class  BallBotMainDrive extends LinearOpMode {
             if (x && !prevX) {
                 if (canSatisfyPattern(patternMgr, spin) && !autoShoot.isBusy()) {
                     shooter.update(false, true, false);
-                    hood.setTarget(25);
+                    hood.setTarget(55);
                     autoShoot.startCycle();
                 } else {
                     shooter.update(false, true, false);
-                    hood.setTarget(25);
+                    hood.setTarget(55);
                     if (!autoShoot.forceShooting && !autoShoot.isBusy()) {
                         autoShoot.startForcedCycle();
                     }
                 }
             } else if (x) {
                 shooter.update(false, true, false);
-                hood.setTarget(25);
+                hood.setTarget(55);
                 if (!autoShoot.forceShooting && !autoShoot.isBusy()) {
                     autoShoot.startForcedCycle();
                 }
@@ -432,6 +433,9 @@ public class  BallBotMainDrive extends LinearOpMode {
                 led1.setGreen();
                 led2.setGreen();
                 led3.setGreen();
+                if(once) {
+                    gamepad1.rumble(2, 2, 250);
+                }
             }
 
             // -----------------------------------------------------
@@ -631,7 +635,8 @@ public class  BallBotMainDrive extends LinearOpMode {
             // CSV LOG FILE INITIALIZATION
             // Creates a timestamped CSV in /sdcard/FIRST and writes header row once.
             // =========================================================
-            /*if (logWriter == null) {
+            //_____
+            /* if (logWriter == null) {
                 try {
                     File dir = new File("/sdcard/FIRST");
                     if (!dir.exists()) dir.mkdirs();
@@ -641,7 +646,7 @@ public class  BallBotMainDrive extends LinearOpMode {
                             Locale.US
                     ).format(new Date());
 
-                    logFilePath = "/sdcard/FIRST/telem_log_" + timestamp + ".csv";
+                    logFilePath = "/sdcard/FIRST/telem_log___" + timestamp + ".csv";
                     logWriter = new PrintWriter(new FileWriter(logFilePath));
 
                     // CSV header: every column is a named measurement/flag
@@ -685,7 +690,9 @@ public class  BallBotMainDrive extends LinearOpMode {
                     telemetry.update();
                 }
             }
-            */
+
+             */
+            //_____
             // Clear shot pattern manually with gamepad1 A
             if (gamepad1.a) {
                 patternMgr.clear();
@@ -777,7 +784,7 @@ public class  BallBotMainDrive extends LinearOpMode {
             telemetry.addData("Pose (x,y,h)", "%.2f, %.2f, %.2f", d.pose.x, d.pose.y, d.pose.h);
 
 // SPINDEXER
-*/
+
             telemetry.addLine("=== SPINDEXER ===");
             telemetry.addData("Mode", spina.mode);
             telemetry.addData("Voltage", "%.3f", spina.voltage);
@@ -788,7 +795,7 @@ public class  BallBotMainDrive extends LinearOpMode {
             telemetry.addData("A", a);
             telemetry.addData("X", x);
             telemetry.addData("shots", autoShoot.shots);
-            /*
+
 
 // TURRET
 
@@ -844,7 +851,7 @@ public class  BallBotMainDrive extends LinearOpMode {
             telemetry.addData("Green", backRightB.green());
 
 //lift
-
+            */
             telemetry.addLine("=== LIFT ===");
             telemetry.addData("pose", l.position);
             telemetry.addData("volt", l.voltage);
@@ -852,7 +859,7 @@ public class  BallBotMainDrive extends LinearOpMode {
             telemetry.addData("mode", l.mode);
             telemetry.addData("up", lifter.isUp());
             telemetry.addData("down", lifter.isDown());
-
+            /*
 
 //hood
 
@@ -868,9 +875,9 @@ public class  BallBotMainDrive extends LinearOpMode {
 
 
             telemetry.addData("limiit", limit.getState());
-           */
+*/
             telemetry.update();
-/*
+
 
 
 
@@ -879,6 +886,8 @@ public class  BallBotMainDrive extends LinearOpMode {
             // CSV LOGGING
             // Write one line every logInterval seconds.
             // =========================================================
+            //_____
+            /*
             if (logWriter != null && logTimer.seconds() > 0.1) {
 
                 double now = runtime.seconds();
@@ -1003,6 +1012,8 @@ public class  BallBotMainDrive extends LinearOpMode {
                 logWriter.flush();
                 logTimer.reset();
             }
+            //_____
+             */
         } // end while opModeIsActive
 
         // =========================================================
@@ -1016,10 +1027,11 @@ public class  BallBotMainDrive extends LinearOpMode {
             telemetry.addData("File", logFilePath);
             telemetry.update();
         }
-         */
 
-        }
+
     }
+
+
 
 
     /**
