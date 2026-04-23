@@ -160,7 +160,7 @@ public class ShooterExecutionClass {
 
         // Keep default lifter configuration and calibration
         lifter.setPresetPositions(0.0, 1.0);
-        lifter.setCalibration(3.1, 0, 1.2, 1);
+        lifter.setCalibration(1.68, 0, 2.564, 1);
 
         // Initialize plan array to "empty"
         for (int i = 0; i < firingPlan.length; i++) firingPlan[i] = -1;
